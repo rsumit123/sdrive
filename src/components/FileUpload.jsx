@@ -22,7 +22,7 @@ import { useAuth } from '../contexts/AuthContext';
 // import { Button, CircularProgress } from '@mui/core';
 
 
-const FileUpload = () => {
+const FileUpload = ({setShowCmdUpload}) => {
   const [selectedFile, setSelectedFile] = useState(null);
   const [tier, setTier] = useState('standard');
   const [uploadedFiles, setUploadedFiles] = useState([]);
@@ -194,6 +194,12 @@ const FileUpload = () => {
       >
         {uploading ? "Uploading..." : "Upload"}
 </Button>
+      <Button
+          variant="contained"
+          color="secondary"
+          onClick={() => setShowCmdUpload(true)}
+          fullWidth
+            >Upload via CMD</Button>
       {uploading && <LinearProgress variant="determinate" value={uploadProgress} />}
       <Typography variant="h6" gutterBottom>Uploaded Files</Typography>
       <List>

@@ -1,19 +1,25 @@
 // src/App.jsx
-import React from 'react';
+import React, { useState } from 'react';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import FileUpload from './components/FileUpload';
-import Login from './components/Login';
+import CmdLineUpload from './components/CmdLineUpload';
 import Auth from './components/Auth';
 import axios from 'axios';
 
 function AppContent() {
   const { user } = useAuth();
+  const [showCmdUpload, setShowCmdUpload] = useState(false);
+
 
   if (!user) {
     return <Auth />;
   }
 
-  return <FileUpload />;
+  if (showCmdUpload) {
+    return <CmdLineUpload setShowCmdUpload={setShowCmdUpload} />;
+  }
+
+  return <FileUpload setShowCmdUpload={setShowCmdUpload} />;
 }
 // Setting up Axios Interceptors in App.jsx or a dedicated setup file
 axios.interceptors.request.use(
