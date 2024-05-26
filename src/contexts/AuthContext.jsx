@@ -16,6 +16,24 @@ export const AuthProvider = ({ children }) => {
     }
   }, []);
 
+  const register = async (email, password) => {
+    try {
+      const response = await axios.post(`${import.meta.env.VITE_BACKEND_URL}/api/auth/register/`, {
+        email,
+        password
+      });
+      if (response.data.token) {
+        localStorage.setItem('token', response.data.token);
+        setUser({ email, token: response.data.token });
+        return response.data; // Optional: return data in case it needs to be used
+      }
+    } catch (error) {
+      console.error('Registration failed:', error);
+      throw error;
+    }
+  };
+  
+
   const login = async (email, password) => {
     try {
       const response = await axios.post(`${import.meta.env.VITE_BACKEND_URL}/api/auth/login/`, { email, password });
@@ -35,7 +53,7 @@ export const AuthProvider = ({ children }) => {
   };
 
   return (
-    <AuthContext.Provider value={{ user, login, logout }}>
+    <AuthContext.Provider value={{ user, login, logout, register }}>
       {children}
     </AuthContext.Provider>
   );

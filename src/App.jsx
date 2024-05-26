@@ -3,13 +3,14 @@ import React from 'react';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import FileUpload from './components/FileUpload';
 import Login from './components/Login';
+import Auth from './components/Auth';
 import axios from 'axios';
 
 function AppContent() {
   const { user } = useAuth();
 
   if (!user) {
-    return <Login />;
+    return <Auth />;
   }
 
   return <FileUpload />;
