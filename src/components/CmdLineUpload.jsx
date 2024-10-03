@@ -14,7 +14,7 @@ function CmdLineUpload({ setShowCmdUpload }) {
     const handleGeneratePresignedUrl = async () => {
         setLoading(true);
         try {
-            const response = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/api/presign/`, {
+            const response = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/api/files/presign/`, {
                 params: { file_name: fileName },
             });
             const presignedUrl = response.data.presigned_url;
