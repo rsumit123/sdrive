@@ -4,6 +4,7 @@ import axiosS3 from '../axioS3'; // Import the S3 axios instance
 import { useAuth } from '../contexts/AuthContext';
 import MoreVertIcon from '@mui/icons-material/MoreVert';
 import DownloadIcon from '@mui/icons-material/Download';
+import DeleteIcon from '@mui/icons-material/Delete';
 import UploadFileIcon from '@mui/icons-material/UploadFile';
 import {
   Container,
@@ -51,35 +52,34 @@ const FileUpload = ({ setShowCmdUpload }) => {
 
   const handleFileUpload = async () => {
     if (!selectedFile) return;
-  
-    const formData = new FormData();
-    formData.append('file', selectedFile);
-    formData.append('tier', tier);
-  
+
+    const { name: file_name, type: content_type, size: file_size } = selectedFile;
+
     setUploading(true);
     setUploadProgress(0);
     setError('');
-  
+
     try {
-      const response = await axios.post(`${import.meta.env.VITE_BACKEND_URL}/api/files/upload/`, formData, {
-        headers: {
-          'Content-Type': 'multipart/form-data',
-        },
-        onUploadProgress: (progressEvent) => {
-          const percentCompleted = Math.round(
-            (progressEvent.loaded * 100) / progressEvent.total
-          );
-          setUploadProgress(percentCompleted);
-        },
-      });
-  
-      if (response.data.presigned_url) {
-        const { presigned_url, s3_key } = response.data;
-  
-        // Upload to S3
+      
+        // Handle large file upload via presigned URL
+        // Step 1: Request presigned URL from backend
+        const presignedResponse = await axios.post(`${import.meta.env.VITE_BACKEND_URL}/api/files/upload/`, {
+          file_name,
+          tier,
+          content_type,
+          file_size,
+        }, {
+          headers: {
+            'Content-Type': 'application/json',
+          },
+        });
+
+        const { presigned_url, s3_key } = presignedResponse.data;
+
+        // Step 2: Upload the file directly to S3
         await axiosS3.put(presigned_url, selectedFile, {
           headers: {
-            'Content-Type': selectedFile.type,
+            'Content-Type': content_type, // Must match the presigned URL
           },
           onUploadProgress: (progressEvent) => {
             const percentCompleted = Math.round(
@@ -88,8 +88,8 @@ const FileUpload = ({ setShowCmdUpload }) => {
             setUploadProgress(percentCompleted);
           },
         });
-  
-        // Confirm upload
+
+        // Step 3: Notify backend that upload is complete
         await axios.post(`${import.meta.env.VITE_BACKEND_URL}/api/files/confirm_upload/`, {
           s3_key: s3_key,
         }, {
@@ -97,23 +97,25 @@ const FileUpload = ({ setShowCmdUpload }) => {
             'Content-Type': 'application/json',
           },
         });
-  
+
         alert('File uploaded successfully');
-      } else {
-        // Small file upload handled by backend
-        alert('File uploaded successfully');
-      }
-  
+      
+
       fetchUploadedFiles();
     } catch (err) {
       console.error('Error uploading file:', err);
-      setError('Failed to upload the file. Please try again.');
+      if (err.response && err.response.data && err.response.data.error) {
+        setError(err.response.data.error);
+      } else {
+        setError('Failed to upload the file. Please try again.');
+      }
     } finally {
       setUploading(false);
       setUploadProgress(0);
       setSelectedFile(null);
     }
   };
+
 
   const fetchUploadedFiles = async () => {
     setLoading(true); // Start loading
@@ -171,6 +173,73 @@ const FileUpload = ({ setShowCmdUpload }) => {
     }
   };
 
+
+  /**
+ * Deletes a file with the given fileId.
+ *
+ * @param {string} fileId - The unique identifier of the file to be deleted.
+ * @param {function} onSuccess - Callback function to execute after successful deletion.
+ */
+const deleteFile = async (fileId, onSuccess) => {
+  // Optional: Prompt user for confirmation before deletion
+  const userConfirmed = window.confirm('Are you sure you want to delete this file? This action cannot be undone.');
+
+  if (!userConfirmed) {
+    return; // Exit the function if user cancels the action
+  }
+
+  try {
+    // Retrieve the authentication token from localStorage (adjust if stored differently)
+    const token = localStorage.getItem('authToken');
+
+    // Send DELETE request to the backend
+    const response = await axios.delete(
+      `${import.meta.env.VITE_BACKEND_URL}/api/files/${fileId}/`,
+      {
+        headers: {
+          'Authorization': `Bearer ${token}`, // Include the token in the Authorization header
+          'Content-Type': 'application/json', // Adjust headers if necessary
+        },
+      }
+    );
+
+    // Handle successful deletion
+    if (response.status === 200) {
+      alert('File deleted successfully.');
+      fetchUploadedFiles(); // Refresh the file list
+      
+    }
+    // Handle other potential success statuses if needed
+    else {
+      alert(`Unexpected response status: ${response.status}`);
+    }
+  } catch (err) {
+    // Handle different error scenarios
+    if (err.response) {
+      // Server responded with a status other than 2xx
+      const { status, data } = err.response;
+      if (status === 404) {
+        alert('File not found or you do not have permission to delete this file.');
+      } else if (status === 400) {
+        alert('Invalid request. Please try again.');
+      } else if (status === 500) {
+        alert('Server error occurred while deleting the file. Please try again later.');
+      } else {
+        alert(`Error: ${data.error || 'An error occurred while deleting the file.'}`);
+      }
+    } else if (err.request) {
+      // Request was made but no response received
+      console.error('No response received:', err.request);
+      alert('No response from server. Please check your network connection.');
+    } else {
+      // Something happened in setting up the request
+      console.error('Error setting up request:', err.message);
+      alert('An unexpected error occurred. Please try again.');
+    }
+
+    console.error('Delete file error:', err);
+  }
+};
   const handleClick = (event, file) => {
     if (!file) {
       console.error('handleClick called without a file');
@@ -445,7 +514,7 @@ const FileUpload = ({ setShowCmdUpload }) => {
         open={Boolean(anchorEl)}
         onClose={handleClose}
       >
-        {selectedFileForMenu && (
+        {selectedFileForMenu && (<>
           <MUIMenuItem
             onClick={() => {
               downloadFile(selectedFileForMenu.id, selectedFileForMenu.file_name);
@@ -454,6 +523,15 @@ const FileUpload = ({ setShowCmdUpload }) => {
           >
             <DownloadIcon style={{ marginRight: '8px' }} /> Download
           </MUIMenuItem>
+          <MUIMenuItem
+            onClick={() => {
+              deleteFile(selectedFileForMenu.id, null);
+              handleClose();
+            }}
+          >
+            <DeleteIcon style={{ marginRight: '8px' }} /> Delete
+          </MUIMenuItem>
+          </>
         )}
       </MUIMenu>
     </Container>
