@@ -1,5 +1,7 @@
+// src/contexts/AuthContext.jsx
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import axios from 'axios';
+import axiosS3 from '../axioS3'; // Import the S3 axios instance
 
 const AuthContext = createContext(null);
 
@@ -7,6 +9,7 @@ export const useAuth = () => useContext(AuthContext);
 
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
+
   useEffect(() => {
     const token = localStorage.getItem('token');
     if (token) {
@@ -15,6 +18,27 @@ export const AuthProvider = ({ children }) => {
       // Optionally, verify token validity with the backend here
     }
   }, []);
+
+  // Add an interceptor to attach the token to outgoing requests on the main axios instance
+  useEffect(() => {
+    const token = user?.token;
+    if (token) {
+      const interceptor = axios.interceptors.request.use(
+        (config) => {
+          config.headers['Authorization'] = `Bearer ${token}`;
+          return config;
+        },
+        (error) => {
+          return Promise.reject(error);
+        }
+      );
+
+      // Cleanup the interceptor on unmount or when token changes
+      return () => {
+        axios.interceptors.request.eject(interceptor);
+      };
+    }
+  }, [user]);
 
   const register = async (email, password) => {
     try {
@@ -32,7 +56,6 @@ export const AuthProvider = ({ children }) => {
       throw error;
     }
   };
-  
 
   const login = async (email, password) => {
     try {

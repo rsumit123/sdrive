@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
+import axiosS3 from '../axioS3'; // Import the S3 axios instance
 import { useAuth } from '../contexts/AuthContext';
 import MoreVertIcon from '@mui/icons-material/MoreVert';
 import DownloadIcon from '@mui/icons-material/Download';
@@ -50,16 +51,17 @@ const FileUpload = ({ setShowCmdUpload }) => {
 
   const handleFileUpload = async () => {
     if (!selectedFile) return;
-
+  
     const formData = new FormData();
     formData.append('file', selectedFile);
     formData.append('tier', tier);
-
+  
     setUploading(true);
     setUploadProgress(0);
-
+    setError('');
+  
     try {
-      await axios.post(`${import.meta.env.VITE_BACKEND_URL}/api/files/upload/`, formData, {
+      const response = await axios.post(`${import.meta.env.VITE_BACKEND_URL}/api/files/upload/`, formData, {
         headers: {
           'Content-Type': 'multipart/form-data',
         },
@@ -70,18 +72,42 @@ const FileUpload = ({ setShowCmdUpload }) => {
           setUploadProgress(percentCompleted);
         },
       });
-
-      // Simulate backend processing time
-      for (let i = uploadProgress; i <= 100; i++) {
-        setTimeout(() => setUploadProgress(i), i * 50); // Adjust delay as needed
+  
+      if (response.data.presigned_url) {
+        const { presigned_url, s3_key } = response.data;
+  
+        // Upload to S3
+        await axiosS3.put(presigned_url, selectedFile, {
+          headers: {
+            'Content-Type': selectedFile.type,
+          },
+          onUploadProgress: (progressEvent) => {
+            const percentCompleted = Math.round(
+              (progressEvent.loaded * 100) / progressEvent.total
+            );
+            setUploadProgress(percentCompleted);
+          },
+        });
+  
+        // Confirm upload
+        await axios.post(`${import.meta.env.VITE_BACKEND_URL}/api/files/confirm_upload/`, {
+          s3_key: s3_key,
+        }, {
+          headers: {
+            'Content-Type': 'application/json',
+          },
+        });
+  
+        alert('File uploaded successfully');
+      } else {
+        // Small file upload handled by backend
+        alert('File uploaded successfully');
       }
-
-      await new Promise((resolve) => setTimeout(resolve, 5000)); // Simulate backend delay
-      alert('File uploaded successfully');
+  
       fetchUploadedFiles();
     } catch (err) {
       console.error('Error uploading file:', err);
-      alert('Failed to upload the file. Please try again.');
+      setError('Failed to upload the file. Please try again.');
     } finally {
       setUploading(false);
       setUploadProgress(0);
@@ -95,7 +121,7 @@ const FileUpload = ({ setShowCmdUpload }) => {
     try {
       const response = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/api/files/`);
       if (Array.isArray(response.data)) {
-        console.log('Uploaded Files:', response.data); // Debugging
+        // console.log('Uploaded Files:', response.data); // Debugging
         setUploadedFiles(response.data);
       } else {
         console.error('Response data is not an array:', response.data);
@@ -110,20 +136,24 @@ const FileUpload = ({ setShowCmdUpload }) => {
   };
 
   const downloadFile = async (fileId, filename) => {
-    console.log('Downloading file and filename ', fileId, filename);
+    // console.log('Downloading file and filename ', fileId, filename);
     try {
       const response = await axios.get(
         `${import.meta.env.VITE_BACKEND_URL}/api/files/${fileId}/download_file/`,
         { responseType: 'blob' }
       );
       if (response.status === 202) {
-        const userConfirmed = window.confirm(
-          'This file is archived and needs to be restored. Do you want to restore it? This may take some time.'
+        alert(
+          'This file is archived and needs to be restored. Please check back in one day.'
         );
-        if (userConfirmed) {
-          alert('Restoration has been initiated. Please try again in 1 day.');
-        }
-      } else {
+        // if (userConfirmed) {
+        //   alert('Restoration has been initiated. Please try again in 1 day.');
+        // }
+      } else if (response.status === 203) {
+        alert('This file is already being restored. Please check back in one day.');
+
+      }
+      else {
         const contentType = response.headers['content-type'];
         const url = window.URL.createObjectURL(
           new Blob([response.data], { type: contentType })
@@ -182,72 +212,84 @@ const FileUpload = ({ setShowCmdUpload }) => {
     return () => clearInterval(interval);
   }, [uploadedFiles]);
 
-  // Define columns for DataGrid with defensive checks
-  const columns = [
-    {
-      field: 'file_name',
-      headerName: 'File Name',
-      flex: 1,
-      minWidth: 150,
-      renderCell: (params) => {
-        if (!params || !params.row) return null;
-        return (
-          <Tooltip title={params.value} arrow>
-            <Link
-              href={params.row.simple_url}
-              target="_blank"
-              rel="noopener noreferrer"
-              style={{
-                whiteSpace: 'nowrap',
-                overflow: 'hidden',
-                textOverflow: 'ellipsis',
-                display: 'block',
-              }}
+
+  const fetchColumns = () => {
+    console.log('Fetching Columns'); // Debugging
+    const columns = [
+      {
+        field: 'file_name',
+        headerName: 'File Name',
+        flex: 1,
+        minWidth: 150,
+        renderCell: (params) => {
+          if (!params || !params.row) return null;
+          return (
+            <Tooltip title={params.value} arrow>
+              <Link
+                href={params.row.simple_url}
+                target="_blank"
+                rel="noopener noreferrer"
+                style={{
+                  whiteSpace: 'nowrap',
+                  overflow: 'hidden',
+                  textOverflow: 'ellipsis',
+                  display: 'block',
+                }}
+              >
+                {params.value}
+              </Link>
+            </Tooltip>
+          );
+        },
+      },
+      {
+        field: 'fileTier', // Renamed field to avoid conflict
+        headerName: 'Tier',
+        width: 120,
+        valueFormatter: (params) => {
+          
+          const tierValue = params;
+          // console.log('Formatted Tier:', tierValue); // Debugging
+          if (tierValue === 'glacier') return 'Archived';
+          if (tierValue === 'unarchiving') return 'Restoring';
+          return 'Standard';
+        },
+      },
+      {
+        field: 'actions',
+        headerName: 'Actions',
+        width: 100,
+        sortable: false,
+        filterable: false,
+        renderCell: (params) => {
+          if (!params || !params.row) return null;
+          return (
+            <IconButton
+              aria-label="more"
+              onClick={(e) => handleClick(e, params.row)}
             >
-              {params.value}
-            </Link>
-          </Tooltip>
-        );
+              <MoreVertIcon />
+            </IconButton>
+          );
+        },
       },
-    },
-    {
-      field: 'tier',
-      headerName: 'Tier',
-      width: 120,
-      valueGetter: (params) => {
-        const tier = params.value; // Direct access to the 'tier' field
-        if (tier === 'glacier') return 'Archived';
-        if (tier === 'unarchiving') return 'Restoring';
-        return 'Standard';
-      },
-    },
-    {
-      field: 'actions',
-      headerName: 'Actions',
-      width: 100,
-      sortable: false,
-      filterable: false,
-      renderCell: (params) => {
-        if (!params || !params.row) return null;
-        return (
-          <IconButton
-            aria-label="more"
-            onClick={(e) => handleClick(e, params.row)}
-          >
-            <MoreVertIcon />
-          </IconButton>
-        );
-      },
-    },
-  ];
+    ];
+
+    return columns;
+
+
+  }
+  // Define columns for DataGrid with defensive checks
+  
 
   // Prepare rows for DataGrid with flattened tier
   const rows = uploadedFiles.map((file, index) => ({
     id: file.id || index, // Ensure each row has a unique id
     file_name: file.file_name || 'Unnamed File',
     simple_url: file.simple_url || '#',
-    tier: file.metadata?.tier || 'standard', // Flattened tier with fallback
+    fileTier: file.metadata?.tier || 'standard', // Renamed tier field
   }));
+
 
   // Filter rows based on search text
   const filteredRows = rows.filter((row) =>
@@ -375,7 +417,7 @@ const FileUpload = ({ setShowCmdUpload }) => {
         <div style={{ height: 500, width: '100%' }}>
           <DataGrid
             rows={filteredRows}
-            columns={columns}
+            columns={fetchColumns()}
             pageSize={10}
             rowsPerPageOptions={[5, 10, 20]}
             pagination
