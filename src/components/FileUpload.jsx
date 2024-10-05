@@ -137,41 +137,44 @@ const FileUpload = ({ setShowCmdUpload }) => {
     }
   };
 
+
   const downloadFile = async (fileId, filename) => {
-    // console.log('Downloading file and filename ', fileId, filename);
     try {
       const response = await axios.get(
-        `${import.meta.env.VITE_BACKEND_URL}/api/files/${fileId}/download_file/`,
-        { responseType: 'blob' }
+        `${import.meta.env.VITE_BACKEND_URL}/api/files/${fileId}/download_presigned_url/`,
+        {
+          // No need for responseType 'blob' since we're getting a URL
+          headers: {
+            // Include any necessary headers, e.g., authorization tokens
+          },
+        }
       );
+  
       if (response.status === 202) {
-        alert(
-          'This file is archived and needs to be restored. Please check back in one day.'
-        );
-        // if (userConfirmed) {
-        //   alert('Restoration has been initiated. Please try again in 1 day.');
-        // }
+        alert('This file is archived and needs to be restored. Please check back in one day.');
       } else if (response.status === 203) {
         alert('This file is already being restored. Please check back in one day.');
-
-      }
-      else {
-        const contentType = response.headers['content-type'];
-        const url = window.URL.createObjectURL(
-          new Blob([response.data], { type: contentType })
-        );
+      } else if (response.status === 200) {
+        const { presigned_url, file_name } = response.data;
+  
+        // Create a temporary link to trigger the download
         const link = document.createElement('a');
-        link.href = url;
-        link.setAttribute('download', filename);
+        link.href = presigned_url;
+        link.setAttribute('download', file_name || filename); // Use the file name from the response if available
         document.body.appendChild(link);
         link.click();
         link.remove();
+      } else {
+        alert('Unexpected response from the server.');
       }
     } catch (err) {
       console.error('Error downloading file:', err);
       alert('Failed to download the file. Please try again later.');
     }
   };
+
+
+
 
 
   /**
