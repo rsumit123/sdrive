@@ -192,7 +192,7 @@ const FileUpload = ({ setShowCmdUpload }) => {
    * @param {string} fileId - The unique identifier of the file to be deleted.
    * @param {function} onSuccess - Callback function to execute after successful deletion.
    */
-  const deleteFile = async (fileId, onSuccess) => {
+  const deleteFile = async (s3Key, onSuccess) => {
     // Optional: Prompt user for confirmation before deletion
     const userConfirmed = window.confirm('Are you sure you want to delete this file? This action cannot be undone.');
 
@@ -203,14 +203,15 @@ const FileUpload = ({ setShowCmdUpload }) => {
     try {
       // Retrieve the authentication token from localStorage (adjust if stored differently)
       const token = localStorage.getItem('authToken');
-
-      // Send DELETE request to the backend
-      const response = await axios.delete(`${import.meta.env.VITE_BACKEND_URL}/api/files/${fileId}/`, {
+      // Corrected DELETE request using Axios
+      const response = await axios.delete(`${import.meta.env.VITE_BACKEND_URL}/api/files/`, {
+        data: { s3_key: s3Key }, // Include the data here
         headers: {
           Authorization: `Bearer ${token}`, // Include the token in the Authorization header
-          'Content-Type': 'application/json', // Adjust headers if necessary
+          'Content-Type': 'application/json', // Ensure the Content-Type is set to JSON
         },
       });
+
 
       // Handle successful deletion
       if (response.status === 200) {
@@ -259,9 +260,12 @@ const FileUpload = ({ setShowCmdUpload }) => {
     setSelectedFileForMenu(file);
   };
 
-  const handleClose = () => {
+  const handleClose = ({selected_file= false} = {}) => {
+    console.log("anchorEl",anchorEl);
     setAnchorEl(null);
-    setSelectedFileForMenu(null);
+    if(!selected_file === true){
+    console.log("Delting selected file",selectedFileForMenu);
+    setSelectedFileForMenu(null);}
   };
 
   const refreshFileMetadata = async (fileId) => {
@@ -292,7 +296,7 @@ const FileUpload = ({ setShowCmdUpload }) => {
   }, [uploadedFiles]);
 
   const fetchColumns = () => {
-    console.log('Fetching Columns'); // Debugging
+    // console.log('Fetching Columns'); // Debugging
     const columns = [
       {
         field: 'file_name',
@@ -354,8 +358,8 @@ const FileUpload = ({ setShowCmdUpload }) => {
         sortable: true,
         filterable: true,
         valueFormatter: (params) => {
-          console.log("params value",params);
-          if (!params) {console.log("No value for date ");return '';}
+          // console.log("params value",params);
+          if (!params) {return '';}
           return new Date(params).toLocaleDateString('en-US', {
             year: 'numeric',
             month: 'short',
@@ -392,7 +396,7 @@ const FileUpload = ({ setShowCmdUpload }) => {
     if (selectedFileForMenu) {
       setRenameNewFilename(selectedFileForMenu.file_name);
       setRenameDialogOpen(true);
-      // handleClose();
+      handleClose({selected_file: true});
       console.log("Selected file for rename while dialog opens",selectedFileForMenu);
     }
   };
@@ -430,7 +434,7 @@ const FileUpload = ({ setShowCmdUpload }) => {
       );
 
       if (response.status === 200) {
-        alert('File renamed successfully.');
+        // alert('File renamed successfully.');
         fetchUploadedFiles(); // Refresh the file list
         setRenameDialogOpen(false); // Close the dialog
       } else {
@@ -451,18 +455,20 @@ const FileUpload = ({ setShowCmdUpload }) => {
   return (
     <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
       {/* Header */}
+      
       <Grid container alignItems="center" justifyContent="space-between" spacing={2}>
-        <Grid item xs={12} sm={6}>
+        <Grid item xs={6} sm={6}>
           <Typography variant="h4" gutterBottom>
             SDrive
           </Typography>
         </Grid>
-        <Grid item>
+        <Grid item xs={6} sm={6} container justifyContent="flex-end">
           <Button color="primary" variant="contained" onClick={logout}>
             Logout
           </Button>
         </Grid>
       </Grid>
+      
 
       {/* Storage Tier Selection */}
       <FormControl fullWidth margin="normal">
@@ -605,7 +611,7 @@ const FileUpload = ({ setShowCmdUpload }) => {
             <MUIMenuItem
               key="delete"
               onClick={() => {
-                deleteFile(selectedFileForMenu.id, null);
+                deleteFile(selectedFileForMenu.s3_key, null);
                 handleClose();
               }}
             >
