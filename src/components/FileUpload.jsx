@@ -5,7 +5,7 @@ import { useAuth } from '../contexts/AuthContext';
 import MoreVertIcon from '@mui/icons-material/MoreVert';
 import DownloadIcon from '@mui/icons-material/Download';
 import DeleteIcon from '@mui/icons-material/Delete';
-import RenameIcon from '@mui/icons-material/Delete'; // Import Rename Icon
+import EditIcon from '@mui/icons-material/Edit' ;
 import UploadFileIcon from '@mui/icons-material/UploadFile';
 import {
   Container,
@@ -623,7 +623,7 @@ const FileUpload = ({ setShowCmdUpload }) => {
                 handleRename();
               }}
             >
-              <RenameIcon style={{ marginRight: '8px' }} /> Rename
+              <EditIcon style={{ marginRight: '8px' }} /> Rename
             </MUIMenuItem>,
           ]}
         </MUIMenu>
