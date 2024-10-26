@@ -5,6 +5,7 @@ import { useAuth } from '../contexts/AuthContext';
 import MoreVertIcon from '@mui/icons-material/MoreVert';
 import DownloadIcon from '@mui/icons-material/Download';
 import DeleteIcon from '@mui/icons-material/Delete';
+import RenameIcon from '@mui/icons-material/Delete'; // Import Rename Icon
 import UploadFileIcon from '@mui/icons-material/UploadFile';
 import {
   Container,
@@ -25,6 +26,10 @@ import {
   TextField,
   Alert,
   Box,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
 } from '@mui/material';
 import { DataGrid } from '@mui/x-data-grid';
 
@@ -39,6 +44,12 @@ const FileUpload = ({ setShowCmdUpload }) => {
   const [searchText, setSearchText] = useState('');
   const [loading, setLoading] = useState(false); // New state for loading
   const [error, setError] = useState(''); // New state for error messages
+
+  // States for Rename Dialog
+  const [renameDialogOpen, setRenameDialogOpen] = useState(false);
+  const [renameNewFilename, setRenameNewFilename] = useState('');
+  const [renameLoading, setRenameLoading] = useState(false);
+  const [renameError, setRenameError] = useState('');
 
   const { logout } = useAuth();
 
@@ -60,46 +71,50 @@ const FileUpload = ({ setShowCmdUpload }) => {
     setError('');
 
     try {
-      
-        // Handle large file upload via presigned URL
-        // Step 1: Request presigned URL from backend
-        const presignedResponse = await axios.post(`${import.meta.env.VITE_BACKEND_URL}/api/files/upload/`, {
+      // Handle large file upload via presigned URL
+      // Step 1: Request presigned URL from backend
+      const presignedResponse = await axios.post(
+        `${import.meta.env.VITE_BACKEND_URL}/api/files/upload/`,
+        {
           file_name,
           tier,
           content_type,
           file_size,
-        }, {
+        },
+        {
           headers: {
             'Content-Type': 'application/json',
           },
-        });
+        }
+      );
 
-        const { presigned_url, s3_key } = presignedResponse.data;
+      const { presigned_url, s3_key } = presignedResponse.data;
 
-        // Step 2: Upload the file directly to S3
-        await axiosS3.put(presigned_url, selectedFile, {
-          headers: {
-            'Content-Type': content_type, // Must match the presigned URL
-          },
-          onUploadProgress: (progressEvent) => {
-            const percentCompleted = Math.round(
-              (progressEvent.loaded * 100) / progressEvent.total
-            );
-            setUploadProgress(percentCompleted);
-          },
-        });
+      // Step 2: Upload the file directly to S3
+      await axiosS3.put(presigned_url, selectedFile, {
+        headers: {
+          'Content-Type': content_type, // Must match the presigned URL
+        },
+        onUploadProgress: (progressEvent) => {
+          const percentCompleted = Math.round((progressEvent.loaded * 100) / progressEvent.total);
+          setUploadProgress(percentCompleted);
+        },
+      });
 
-        // Step 3: Notify backend that upload is complete
-        await axios.post(`${import.meta.env.VITE_BACKEND_URL}/api/files/confirm_upload/`, {
+      // Step 3: Notify backend that upload is complete
+      await axios.post(
+        `${import.meta.env.VITE_BACKEND_URL}/api/files/confirm_upload/`,
+        {
           s3_key: s3_key,
-        }, {
+        },
+        {
           headers: {
             'Content-Type': 'application/json',
           },
-        });
+        }
+      );
 
-        alert('File uploaded successfully');
-      
+      alert('File uploaded successfully');
 
       fetchUploadedFiles();
     } catch (err) {
@@ -115,7 +130,6 @@ const FileUpload = ({ setShowCmdUpload }) => {
       setSelectedFile(null);
     }
   };
-
 
   const fetchUploadedFiles = async () => {
     setLoading(true); // Start loading
@@ -137,7 +151,6 @@ const FileUpload = ({ setShowCmdUpload }) => {
     }
   };
 
-
   const downloadFile = async (fileId, filename) => {
     try {
       const response = await axios.get(
@@ -149,14 +162,14 @@ const FileUpload = ({ setShowCmdUpload }) => {
           },
         }
       );
-  
+
       if (response.status === 202) {
         alert('This file is archived and needs to be restored. Please check back in one day.');
       } else if (response.status === 203) {
         alert('This file is already being restored. Please check back in one day.');
       } else if (response.status === 200) {
         const { presigned_url, file_name } = response.data;
-  
+
         // Create a temporary link to trigger the download
         const link = document.createElement('a');
         link.href = presigned_url;
@@ -173,82 +186,76 @@ const FileUpload = ({ setShowCmdUpload }) => {
     }
   };
 
-
-
-
-
   /**
- * Deletes a file with the given fileId.
- *
- * @param {string} fileId - The unique identifier of the file to be deleted.
- * @param {function} onSuccess - Callback function to execute after successful deletion.
- */
-const deleteFile = async (fileId, onSuccess) => {
-  // Optional: Prompt user for confirmation before deletion
-  const userConfirmed = window.confirm('Are you sure you want to delete this file? This action cannot be undone.');
+   * Deletes a file with the given fileId.
+   *
+   * @param {string} fileId - The unique identifier of the file to be deleted.
+   * @param {function} onSuccess - Callback function to execute after successful deletion.
+   */
+  const deleteFile = async (fileId, onSuccess) => {
+    // Optional: Prompt user for confirmation before deletion
+    const userConfirmed = window.confirm('Are you sure you want to delete this file? This action cannot be undone.');
 
-  if (!userConfirmed) {
-    return; // Exit the function if user cancels the action
-  }
+    if (!userConfirmed) {
+      return; // Exit the function if user cancels the action
+    }
 
-  try {
-    // Retrieve the authentication token from localStorage (adjust if stored differently)
-    const token = localStorage.getItem('authToken');
+    try {
+      // Retrieve the authentication token from localStorage (adjust if stored differently)
+      const token = localStorage.getItem('authToken');
 
-    // Send DELETE request to the backend
-    const response = await axios.delete(
-      `${import.meta.env.VITE_BACKEND_URL}/api/files/${fileId}/`,
-      {
+      // Send DELETE request to the backend
+      const response = await axios.delete(`${import.meta.env.VITE_BACKEND_URL}/api/files/${fileId}/`, {
         headers: {
-          'Authorization': `Bearer ${token}`, // Include the token in the Authorization header
+          Authorization: `Bearer ${token}`, // Include the token in the Authorization header
           'Content-Type': 'application/json', // Adjust headers if necessary
         },
-      }
-    );
+      });
 
-    // Handle successful deletion
-    if (response.status === 200) {
-      alert('File deleted successfully.');
-      fetchUploadedFiles(); // Refresh the file list
-      
-    }
-    // Handle other potential success statuses if needed
-    else {
-      alert(`Unexpected response status: ${response.status}`);
-    }
-  } catch (err) {
-    // Handle different error scenarios
-    if (err.response) {
-      // Server responded with a status other than 2xx
-      const { status, data } = err.response;
-      if (status === 404) {
-        alert('File not found or you do not have permission to delete this file.');
-      } else if (status === 400) {
-        alert('Invalid request. Please try again.');
-      } else if (status === 500) {
-        alert('Server error occurred while deleting the file. Please try again later.');
+      // Handle successful deletion
+      if (response.status === 200) {
+        alert('File deleted successfully.');
+        fetchUploadedFiles(); // Refresh the file list
+      }
+      // Handle other potential success statuses if needed
+      else {
+        alert(`Unexpected response status: ${response.status}`);
+      }
+    } catch (err) {
+      // Handle different error scenarios
+      if (err.response) {
+        // Server responded with a status other than 2xx
+        const { status, data } = err.response;
+        if (status === 404) {
+          alert('File not found or you do not have permission to delete this file.');
+        } else if (status === 400) {
+          alert('Invalid request. Please try again.');
+        } else if (status === 500) {
+          alert('Server error occurred while deleting the file. Please try again later.');
+        } else {
+          alert(`Error: ${data.error || 'An error occurred while deleting the file.'}`);
+        }
+      } else if (err.request) {
+        // Request was made but no response received
+        console.error('No response received:', err.request);
+        alert('No response from server. Please check your network connection.');
       } else {
-        alert(`Error: ${data.error || 'An error occurred while deleting the file.'}`);
+        // Something happened in setting up the request
+        console.error('Error setting up request:', err.message);
+        alert('An unexpected error occurred. Please try again.');
       }
-    } else if (err.request) {
-      // Request was made but no response received
-      console.error('No response received:', err.request);
-      alert('No response from server. Please check your network connection.');
-    } else {
-      // Something happened in setting up the request
-      console.error('Error setting up request:', err.message);
-      alert('An unexpected error occurred. Please try again.');
-    }
 
-    console.error('Delete file error:', err);
-  }
-};
+      console.error('Delete file error:', err);
+    }
+  };
+
   const handleClick = (event, file) => {
     if (!file) {
       console.error('handleClick called without a file');
       return;
     }
     setAnchorEl(event.currentTarget);
+    console.log("File selected ",file);
     setSelectedFileForMenu(file);
   };
 
@@ -284,7 +291,6 @@ const deleteFile = async (fileId, onSuccess) => {
     return () => clearInterval(interval);
   }, [uploadedFiles]);
 
-
   const fetchColumns = () => {
     console.log('Fetching Columns'); // Debugging
     const columns = [
@@ -319,8 +325,7 @@ const deleteFile = async (fileId, onSuccess) => {
         headerName: 'Tier',
         width: 120,
         valueFormatter: (params) => {
-          
-          const tierValue = params;
+          const tierValue = params.value; // Corrected to access params.value
           // console.log('Formatted Tier:', tierValue); // Debugging
           if (tierValue === 'glacier') return 'Archived';
           if (tierValue === 'unarchiving') return 'Restoring';
@@ -336,37 +341,112 @@ const deleteFile = async (fileId, onSuccess) => {
         renderCell: (params) => {
           if (!params || !params.row) return null;
           return (
-            <IconButton
-              aria-label="more"
-              onClick={(e) => handleClick(e, params.row)}
-            >
+            <IconButton aria-label="more" onClick={(e) => handleClick(e, params.row)}>
               <MoreVertIcon />
             </IconButton>
           );
         },
       },
+      {
+        field: 'last_modified',
+        headerName: 'Date',
+        width: 180, // Increased width to accommodate the date format
+        sortable: true,
+        filterable: true,
+        valueFormatter: (params) => {
+          console.log("params value",params);
+          if (!params) {console.log("No value for date ");return '';}
+          return new Date(params).toLocaleDateString('en-US', {
+            year: 'numeric',
+            month: 'short',
+            day: 'numeric',
+            hour: '2-digit',
+            minute: '2-digit',
+          });
+        },
+      },
+      
     ];
 
     return columns;
-
-
-  }
-  // Define columns for DataGrid with defensive checks
-  
+  };
 
   // Prepare rows for DataGrid with flattened tier
   const rows = uploadedFiles.map((file, index) => ({
+
     id: file.id || index, // Ensure each row has a unique id
     file_name: file.file_name || 'Unnamed File',
     simple_url: file.simple_url || '#',
     fileTier: file.metadata?.tier || 'standard', // Renamed tier field
+    s3_key: file.s3_key || '', // Include s3_key for rename operation
+    last_modified: file.last_modified || '', // Include last_modified for Date column
   }));
-
 
   // Filter rows based on search text
   const filteredRows = rows.filter((row) =>
     row.file_name.toLowerCase().includes(searchText.toLowerCase())
   );
+
+  // Handle Rename Dialog Open
+  const handleRename = () => {
+    if (selectedFileForMenu) {
+      setRenameNewFilename(selectedFileForMenu.file_name);
+      setRenameDialogOpen(true);
+      // handleClose();
+      console.log("Selected file for rename while dialog opens",selectedFileForMenu);
+    }
+  };
+
+  // Handle Rename Submit
+  const submitRename = async () => {
+    
+    console.log('Renaming file:', selectedFileForMenu, 'to:', renameNewFilename); // Debugging
+    if (!selectedFileForMenu) return;
+    if (!renameNewFilename.trim()) {
+      setRenameError('New filename cannot be empty.');
+      return;
+    }
+
+    setRenameLoading(true);
+    setRenameError('');
+
+    try {
+      // Retrieve the authentication token from localStorage (adjust if stored differently)
+      const token = localStorage.getItem('authToken');
+
+      // Send POST request to rename the file
+      const response = await axios.post(
+        `${import.meta.env.VITE_BACKEND_URL}/api/files/rename/`,
+        {
+          s3_key: selectedFileForMenu.s3_key,
+          new_filename: renameNewFilename.trim(),
+        },
+        {
+          headers: {
+            Authorization: `Bearer ${token}`, // Include the token in the Authorization header
+            'Content-Type': 'application/json',
+          },
+        }
+      );
+
+      if (response.status === 200) {
+        alert('File renamed successfully.');
+        fetchUploadedFiles(); // Refresh the file list
+        setRenameDialogOpen(false); // Close the dialog
+      } else {
+        setRenameError('Unexpected response from the server.');
+      }
+    } catch (err) {
+      console.error('Error renaming file:', err);
+      if (err.response && err.response.data && err.response.data.error) {
+        setRenameError(err.response.data.error);
+      } else {
+        setRenameError('Failed to rename the file. Please try again.');
+      }
+    } finally {
+      setRenameLoading(false);
+    }
+  };
 
   return (
     <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
@@ -426,11 +506,7 @@ const deleteFile = async (fileId, onSuccess) => {
             disabled={uploading || !selectedFile}
             fullWidth
             startIcon={
-              uploading ? (
-                <CircularProgress size={24} color="secondary" />
-              ) : (
-                <UploadFileIcon />
-              )
+              uploading ? <CircularProgress size={24} color="secondary" /> : <UploadFileIcon />
             }
           >
             {uploading ? 'Uploading...' : 'Upload'}
@@ -509,34 +585,82 @@ const deleteFile = async (fileId, onSuccess) => {
         </Typography>
       )}
 
-      {/* Actions Menu */}
-      <MUIMenu
-        id="long-menu"
-        anchorEl={anchorEl}
-        keepMounted
-        open={Boolean(anchorEl)}
-        onClose={handleClose}
-      >
-        {selectedFileForMenu && (<>
-          <MUIMenuItem
-            onClick={() => {
-              downloadFile(selectedFileForMenu.id, selectedFileForMenu.file_name);
-              handleClose();
-            }}
+        <MUIMenu
+          id="long-menu"
+          anchorEl={anchorEl}
+          keepMounted
+          open={Boolean(anchorEl)}
+          onClose={handleClose}
+        >
+          {selectedFileForMenu && [
+            <MUIMenuItem
+              key="download"
+              onClick={() => {
+                downloadFile(selectedFileForMenu.id, selectedFileForMenu.file_name);
+                handleClose();
+              }}
+            >
+              <DownloadIcon style={{ marginRight: '8px' }} /> Download
+            </MUIMenuItem>,
+            <MUIMenuItem
+              key="delete"
+              onClick={() => {
+                deleteFile(selectedFileForMenu.id, null);
+                handleClose();
+              }}
+            >
+              <DeleteIcon style={{ marginRight: '8px' }} /> Delete
+            </MUIMenuItem>,
+            <MUIMenuItem
+              key="rename"
+              onClick={() => {
+                handleRename();
+              }}
+            >
+              <RenameIcon style={{ marginRight: '8px' }} /> Rename
+            </MUIMenuItem>,
+          ]}
+        </MUIMenu>
+
+
+      {/* Rename Dialog */}
+      <Dialog open={renameDialogOpen} onClose={() => setRenameDialogOpen(false)}>
+        <DialogTitle>Rename File</DialogTitle>
+        <DialogContent>
+          <Typography variant="body1" gutterBottom>
+            Renaming <strong>{selectedFileForMenu?.file_name}</strong> to:
+          </Typography>
+          <TextField
+            autoFocus
+            margin="dense"
+            label="New Filename"
+            type="text"
+            fullWidth
+            variant="outlined"
+            value={renameNewFilename}
+            onChange={(e) => setRenameNewFilename(e.target.value)}
+            disabled={renameLoading}
+          />
+          {renameError && (
+            <Alert severity="error" sx={{ mt: 2 }}>
+              {renameError}
+            </Alert>
+          )}
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setRenameDialogOpen(false)} disabled={renameLoading}>
+            Cancel
+          </Button>
+          <Button
+            onClick={() => submitRename()}
+            color="primary"
+            variant="contained"
+            disabled={renameLoading}
           >
-            <DownloadIcon style={{ marginRight: '8px' }} /> Download
-          </MUIMenuItem>
-          <MUIMenuItem
-            onClick={() => {
-              deleteFile(selectedFileForMenu.id, null);
-              handleClose();
-            }}
-          >
-            <DeleteIcon style={{ marginRight: '8px' }} /> Delete
-          </MUIMenuItem>
-          </>
-        )}
-      </MUIMenu>
+            {renameLoading ? <CircularProgress size={24} color="inherit" /> : 'Submit'}
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Container>
   );
 };
