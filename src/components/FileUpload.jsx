@@ -271,16 +271,16 @@ const FileUpload = ({ setShowCmdUpload }) => {
     setLoading(true);
     setError('');
     try {
-      const response = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/api/v3/files/`);
-      if (Array.isArray(response.data.files)) {2
+      const response = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/api/v2/files/`);
+      if (Array.isArray(response.data.files)) {
         setUploadedFiles(response.data.files);
       } else {
-        console.error('Response data is not an array:', response.data);
+        console.error('Response data.files is not an array:', response.data);
         setError('Unexpected response format from the server.');
       }
     } catch (err) {
       console.error('Error fetching files:', err);
-      setError('Could not fetch data. Please contact admin.');
+      setError(err.response?.data?.error || 'Could not fetch data. Please contact admin.');
     } finally {
       setLoading(false);
     }

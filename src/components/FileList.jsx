@@ -70,21 +70,8 @@ const FileList = ({
   const [tierChangeLoading, setTierChangeLoading] = useState(false);
   const [tierChangeError, setTierChangeError] = useState('');
 
-  // Handle authentication errors (401, 403)
-  const handleAuthError = (err) => {
-    if (err.response && (err.response.status === 401 || err.response.status === 403)) {
-      console.error('Authentication error:', err.response.status);
-      // Clear any auth tokens
-      localStorage.removeItem('authToken');
-      // Redirect to login page using window.location
-      window.location.href = '/login';
-      return true;
-    }
-    return false;
-  };
-
   // Fetch files from the API
-  const fetchFiles = async (pageNum = 1, useCache = true, isRefresh = false) => {
+  const fetchFiles = async (pageNum = 1, useCache = false, isRefresh = false) => {
     if (isRefresh) {
       setRefreshing(true);
     } else {
@@ -99,20 +86,26 @@ const FileList = ({
         use_cache: useCache
       };
       
+      console.log(`Fetching files: page=${pageNum}, useCache=${useCache}`); // Log request params
       const response = await axios.get(
         `${import.meta.env.VITE_BACKEND_URL}/api/v3/files/`, 
         { params }
       );
       
+      // --- Add Logs Here --- 
+      console.log("API Response for Files:", response.data);
+      const receivedTotalPages = response.data.total_pages || 1;
+      const receivedTotalFiles = response.data.total || 0;
+      console.log(`Received total_pages: ${receivedTotalPages}, total: ${receivedTotalFiles}`);
+      // --- End Logs --- 
+
       setFiles(response.data.files);
-      setTotalPages(response.data.total_pages || 1);
-      setTotalFiles(response.data.total || 0);
+      setTotalPages(receivedTotalPages);
+      setTotalFiles(receivedTotalFiles);
       
     } catch (err) {
       console.error('Error fetching files:', err);
-      if (!handleAuthError(err)) {
-        setError(err.response?.data?.error || 'Failed to fetch files. Please try again.');
-      }
+      setError(err.response?.data?.error || 'Failed to fetch files. Please try again.');
     } finally {
       if (isRefresh) {
         setRefreshing(false);
@@ -144,7 +137,6 @@ const FileList = ({
       });
     } catch (err) {
       console.error(`Error fetching details for file ${fileIdentifier}:`, err);
-      handleAuthError(err);
       // If we can't get the file details, we'll just leave it as is
     } finally {
       setUpdatingFileId(null);
@@ -195,9 +187,7 @@ const FileList = ({
       
     } catch (err) {
       console.error(`Error changing tier for file ${fileIdentifier}:`, err);
-      if (!handleAuthError(err)) {
-        setTierChangeError(err.response?.data?.error || 'Failed to change file tier. Please try again.');
-      }
+      setTierChangeError(err.response?.data?.error || 'Failed to change file tier. Please try again.');
     } finally {
       setTierChangeLoading(false);
     }
@@ -319,9 +309,7 @@ const FileList = ({
         }
       } catch (err) {
         console.error('Error downloading file:', err);
-        if (!handleAuthError(err)) {
-          alert('Failed to download the file. Please try again later.');
-        }
+        alert('Failed to download the file. Please try again later.');
       } finally {
         setUpdatingFileId(null);
       }

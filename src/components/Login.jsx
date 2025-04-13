@@ -1,20 +1,21 @@
 import React, { useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { Container, TextField, Button, Typography, Box, CircularProgress } from '@mui/material';
-
+import { useNavigate } from 'react-router-dom';
 
 function Login() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const { login } = useAuth();
-
+  const navigate = useNavigate();
 
   const handleLogin = async () => {
     try {
       setLoading(true);
       await login(email, password);
-      // alert('Login successful');
+      alert('Login successful');
+      navigate('/');
       setLoading(false);
     } catch (error) {
       alert('Login failed');
