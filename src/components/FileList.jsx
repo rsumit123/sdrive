@@ -462,7 +462,7 @@ const FileList = ({
         <Grid item xs={12} sm={6} container justifyContent="flex-end">
           <Button 
             variant="outlined" 
-            startIcon={<RefreshIcon />} 
+            startIcon={refreshing ? <CircularProgress size={20} /> : <RefreshIcon />} 
             onClick={refreshFiles}
             disabled={refreshing}
             sx={{ ml: 2 }}
