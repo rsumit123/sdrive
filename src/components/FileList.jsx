@@ -25,6 +25,7 @@ import {
   DialogContentText,
   DialogActions,
   Snackbar,
+  Paper,
 } from '@mui/material';
 import MoreVertIcon from '@mui/icons-material/MoreVert';
 import DownloadIcon from '@mui/icons-material/Download';
@@ -502,24 +503,34 @@ const FileList = ({
   };
 
   return (
-    <Box sx={{ mt: 4 }}>
+    <Box sx={{ mt: { xs: 2, sm: 4 } }}>
       <Grid container spacing={2} alignItems="center" sx={{ mb: 2 }}>
-        <Grid item xs={12} sm={6}>
+        <Grid item xs={12} sm={8}>
           <TextField
             label="Search Files"
             variant="outlined"
             fullWidth
             value={searchText}
             onChange={(e) => setSearchText(e.target.value)}
+            sx={{
+              '& .MuiOutlinedInput-root': {
+                borderRadius: 2,
+              },
+            }}
           />
         </Grid>
-        <Grid item xs={12} sm={6} container justifyContent="flex-end">
+        <Grid item xs={12} sm={4}>
           <Button 
             variant="outlined" 
             startIcon={refreshing ? <CircularProgress size={20} /> : <RefreshIcon />} 
             onClick={refreshFiles}
             disabled={refreshing}
-            sx={{ ml: 2 }}
+            fullWidth
+            sx={{ 
+              borderRadius: 2,
+              py: 1.5,
+              fontWeight: 500,
+            }}
           >
             {refreshing ? 'Refreshing...' : 'Refresh'}
           </Button>
@@ -528,45 +539,68 @@ const FileList = ({
 
       {/* Stats Section */}
       {files.length > 0 && (
-        <Box 
-          sx={{ 
-            mb: 3, 
-            p: 2, 
-            backgroundColor: 'background.paper',
-            borderRadius: 1,
-            border: '1px solid',
-            borderColor: 'divider',
-            display: 'flex',
-            justifyContent: 'space-around',
-            flexWrap: 'wrap',
-            gap: 2
-          }}
-        >
-          <Box sx={{ textAlign: 'center' }}>
-            <Typography variant="body2" color="text.secondary">
-              Total Space Used
-            </Typography>
-            <Typography variant="h6" color="primary" sx={{ fontWeight: 'bold', mt: 0.5 }}>
-              {formatFileSize(calculateTotalSpaceUsed())}
-            </Typography>
-          </Box>
-          <Box sx={{ textAlign: 'center' }}>
-            <Typography variant="body2" color="text.secondary">
-              Total Files
-            </Typography>
-            <Typography variant="h6" color="primary" sx={{ fontWeight: 'bold', mt: 0.5 }}>
-              {totalFiles}
-            </Typography>
-          </Box>
-          <Box sx={{ textAlign: 'center' }}>
-            <Typography variant="body2" color="text.secondary">
-              Files in View
-            </Typography>
-            <Typography variant="h6" color="primary" sx={{ fontWeight: 'bold', mt: 0.5 }}>
-              {filteredFiles.length}
-            </Typography>
-          </Box>
-        </Box>
+        <Grid container spacing={2} sx={{ mb: 3 }}>
+          <Grid item xs={12} sm={4}>
+            <Paper
+              elevation={2}
+              sx={{
+                p: 2,
+                borderRadius: 2,
+                textAlign: 'center',
+                background: 'linear-gradient(135deg, #667eea15 0%, #764ba215 100%)',
+                border: '1px solid',
+                borderColor: 'divider',
+              }}
+            >
+              <Typography variant="body2" color="text.secondary" sx={{ mb: 0.5 }}>
+                Total Space Used
+              </Typography>
+              <Typography variant="h6" color="primary" sx={{ fontWeight: 700 }}>
+                {formatFileSize(calculateTotalSpaceUsed())}
+              </Typography>
+            </Paper>
+          </Grid>
+          <Grid item xs={6} sm={4}>
+            <Paper
+              elevation={2}
+              sx={{
+                p: 2,
+                borderRadius: 2,
+                textAlign: 'center',
+                background: 'linear-gradient(135deg, #667eea15 0%, #764ba215 100%)',
+                border: '1px solid',
+                borderColor: 'divider',
+              }}
+            >
+              <Typography variant="body2" color="text.secondary" sx={{ mb: 0.5 }}>
+                Total Files
+              </Typography>
+              <Typography variant="h6" color="primary" sx={{ fontWeight: 700 }}>
+                {totalFiles}
+              </Typography>
+            </Paper>
+          </Grid>
+          <Grid item xs={6} sm={4}>
+            <Paper
+              elevation={2}
+              sx={{
+                p: 2,
+                borderRadius: 2,
+                textAlign: 'center',
+                background: 'linear-gradient(135deg, #667eea15 0%, #764ba215 100%)',
+                border: '1px solid',
+                borderColor: 'divider',
+              }}
+            >
+              <Typography variant="body2" color="text.secondary" sx={{ mb: 0.5 }}>
+                Files in View
+              </Typography>
+              <Typography variant="h6" color="primary" sx={{ fontWeight: 700 }}>
+                {filteredFiles.length}
+              </Typography>
+            </Paper>
+          </Grid>
+        </Grid>
       )}
 
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
@@ -599,7 +633,7 @@ const FileList = ({
       ) : (
         <Grid container spacing={2}>
           {filteredFiles.map((file) => (
-            <Grid item xs={12} sm={6} md={4} key={file.id}>
+            <Grid item xs={12} sm={6} md={4} lg={3} key={file.id}>
               <Card 
                 variant="outlined" 
                 sx={{ 
@@ -608,12 +642,19 @@ const FileList = ({
                   opacity: updatingFileId === file.id || updatingFileId === file.s3_key ? 0.7 : 1,
                   display: 'flex',
                   flexDirection: 'column',
-                  transition: 'all 0.2s ease-in-out',
+                  transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                  borderRadius: 3,
+                  overflow: 'hidden',
                   '&:hover': {
-                    transform: 'translateY(-4px)',
-                    boxShadow: '0 4px 8px rgba(0,0,0,0.1)',
+                    transform: { xs: 'none', sm: 'translateY(-8px)' },
+                    boxShadow: { 
+                      xs: '0 2px 8px rgba(0,0,0,0.1)',
+                      sm: '0 8px 24px rgba(0,0,0,0.15)' 
+                    },
                   },
-                  cursor: 'pointer'
+                  cursor: 'pointer',
+                  border: '1px solid',
+                  borderColor: 'divider',
                 }}
                 onClick={() => handleCardClick(file)}
               >
@@ -638,10 +679,18 @@ const FileList = ({
                 
                 {getFileThumbnail(file)}
                 
-                <CardContent sx={{ flexGrow: 1, position: 'relative' }}>
-                  <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                <CardContent sx={{ flexGrow: 1, position: 'relative', p: { xs: 1.5, sm: 2 } }}>
+                  <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 1 }}>
                     <Tooltip title={file.file_name} arrow>
-                      <Typography variant="h6" noWrap sx={{ maxWidth: '80%' }}>
+                      <Typography 
+                        variant="h6" 
+                        noWrap 
+                        sx={{ 
+                          maxWidth: { xs: '70%', sm: '80%' },
+                          fontSize: { xs: '0.95rem', sm: '1rem' },
+                          fontWeight: 600,
+                        }}
+                      >
                         {file.file_name}
                       </Typography>
                     </Tooltip>
@@ -649,28 +698,45 @@ const FileList = ({
                       aria-label="more" 
                       onClick={(e) => handleClick(e, file)}
                       size="small"
-                      sx={{ zIndex: 2 }}
+                      sx={{ 
+                        zIndex: 2,
+                        '&:hover': {
+                          backgroundColor: 'action.hover',
+                        },
+                      }}
                     >
                       <MoreVertIcon />
                     </IconButton>
                   </Box>
                   
-                  <Divider sx={{ my: 1 }} />
+                  <Divider sx={{ my: 1.5 }} />
                   
                   <Box sx={{ mt: 1 }}>
-                    <Typography variant="body2" color="text.secondary">
+                    <Typography 
+                      variant="body2" 
+                      color="text.secondary"
+                      sx={{ fontSize: { xs: '0.75rem', sm: '0.875rem' }, mb: 0.5 }}
+                    >
                       Size: {formatFileSize(file.metadata?.size)}
                     </Typography>
-                    <Typography variant="body2" color="text.secondary">
+                    <Typography 
+                      variant="body2" 
+                      color="text.secondary"
+                      sx={{ fontSize: { xs: '0.75rem', sm: '0.875rem' }, mb: 1 }}
+                    >
                       Modified: {formatDate(file.last_modified)}
                     </Typography>
-                    <Box sx={{ display: 'flex', alignItems: 'center', mt: 1, justifyContent: 'space-between' }}>
+                    <Box sx={{ display: 'flex', alignItems: 'center', mt: 1, justifyContent: 'space-between', flexWrap: 'wrap', gap: 1 }}>
                       <Chip 
                         icon={getTierIcon(file.metadata?.tier)} 
                         label={getTierLabel(file.metadata?.tier)}
                         size="small"
                         color={file.metadata?.tier === 'glacier' ? 'info' : 'default'}
                         variant={file.metadata?.tier === 'unarchiving' ? 'outlined' : 'filled'}
+                        sx={{ 
+                          fontSize: { xs: '0.7rem', sm: '0.75rem' },
+                          height: { xs: 20, sm: 24 },
+                        }}
                       />
                       <Tooltip title="Open in new tab">
                         <OpenInNewIcon fontSize="small" color="action" />
@@ -685,13 +751,19 @@ const FileList = ({
       )}
 
       {totalPages > 1 && (
-        <Box sx={{ display: 'flex', justifyContent: 'center', mt: 3, mb: 2 }}>
+        <Box sx={{ display: 'flex', justifyContent: 'center', mt: { xs: 2, sm: 3 }, mb: 2 }}>
           <Pagination 
             count={totalPages} 
             page={page} 
             onChange={handlePageChange} 
             color="primary"
             disabled={loading || refreshing}
+            size={{ xs: 'small', sm: 'medium' }}
+            sx={{
+              '& .MuiPaginationItem-root': {
+                borderRadius: 2,
+              },
+            }}
           />
         </Box>
       )}
