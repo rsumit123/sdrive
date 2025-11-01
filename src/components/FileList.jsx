@@ -223,6 +223,15 @@ const FileList = ({
     return (bytes / (1024 * 1024 * 1024)).toFixed(2) + ' GB';
   };
 
+  // Calculate total space used from all files
+  const calculateTotalSpaceUsed = () => {
+    const totalBytes = files.reduce((sum, file) => {
+      const fileSize = file.metadata?.size || 0;
+      return sum + fileSize;
+    }, 0);
+    return totalBytes;
+  };
+
   // Format date to user-friendly format
   const formatDate = (isoString) => {
     if (!isoString) return 'Unknown';
@@ -517,15 +526,53 @@ const FileList = ({
         </Grid>
       </Grid>
 
+      {/* Stats Section */}
+      {files.length > 0 && (
+        <Box 
+          sx={{ 
+            mb: 3, 
+            p: 2, 
+            backgroundColor: 'background.paper',
+            borderRadius: 1,
+            border: '1px solid',
+            borderColor: 'divider',
+            display: 'flex',
+            justifyContent: 'space-around',
+            flexWrap: 'wrap',
+            gap: 2
+          }}
+        >
+          <Box sx={{ textAlign: 'center' }}>
+            <Typography variant="body2" color="text.secondary">
+              Total Space Used
+            </Typography>
+            <Typography variant="h6" color="primary" sx={{ fontWeight: 'bold', mt: 0.5 }}>
+              {formatFileSize(calculateTotalSpaceUsed())}
+            </Typography>
+          </Box>
+          <Box sx={{ textAlign: 'center' }}>
+            <Typography variant="body2" color="text.secondary">
+              Total Files
+            </Typography>
+            <Typography variant="h6" color="primary" sx={{ fontWeight: 'bold', mt: 0.5 }}>
+              {totalFiles}
+            </Typography>
+          </Box>
+          <Box sx={{ textAlign: 'center' }}>
+            <Typography variant="body2" color="text.secondary">
+              Files in View
+            </Typography>
+            <Typography variant="h6" color="primary" sx={{ fontWeight: 'bold', mt: 0.5 }}>
+              {filteredFiles.length}
+            </Typography>
+          </Box>
+        </Box>
+      )}
+
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
         <Typography variant="h6" gutterBottom>
           Uploaded Files
         </Typography>
-        {files.length > 0 && (
-          <Typography variant="body2" color="text.secondary">
-            Showing {filteredFiles.length} of {totalFiles} files
-          </Typography>
-        )}
       </Box>
 
       {error && (
