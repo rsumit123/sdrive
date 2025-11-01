@@ -626,128 +626,167 @@ const FileList = ({
         >
           <CircularProgress />
         </Box>
-      ) : filteredFiles.length === 0 ? (
-        <Typography variant="body1" sx={{ mt: 2 }}>
-          {files.length === 0 ? 'No files uploaded yet.' : 'No files match your search.'}
-        </Typography>
       ) : (
-        <Grid container spacing={2}>
-          {filteredFiles.map((file) => (
-            <Grid item xs={12} sm={6} md={4} lg={3} key={file.id}>
-              <Card 
-                variant="outlined" 
-                sx={{ 
-                  height: '100%',
-                  position: 'relative',
-                  opacity: updatingFileId === file.id || updatingFileId === file.s3_key ? 0.7 : 1,
+        <Box sx={{ position: 'relative' }}>
+          {/* Loading Overlay for pagination/refresh when files exist */}
+          {(loading || refreshing) && files.length > 0 && (
+            <Box
+              sx={{
+                position: 'absolute',
+                top: 0,
+                left: 0,
+                right: 0,
+                bottom: 0,
+                backgroundColor: 'rgba(255, 255, 255, 0.8)',
+                backdropFilter: 'blur(2px)',
+                display: 'flex',
+                justifyContent: 'center',
+                alignItems: 'center',
+                zIndex: 10,
+                borderRadius: 2,
+                minHeight: 400,
+              }}
+            >
+              <Box
+                sx={{
                   display: 'flex',
                   flexDirection: 'column',
-                  transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-                  borderRadius: 3,
-                  overflow: 'hidden',
-                  '&:hover': {
-                    transform: { xs: 'none', sm: 'translateY(-8px)' },
-                    boxShadow: { 
-                      xs: '0 2px 8px rgba(0,0,0,0.1)',
-                      sm: '0 8px 24px rgba(0,0,0,0.15)' 
-                    },
-                  },
-                  cursor: 'pointer',
-                  border: '1px solid',
-                  borderColor: 'divider',
+                  alignItems: 'center',
+                  gap: 2,
                 }}
-                onClick={() => handleCardClick(file)}
               >
-                {(updatingFileId === file.id || updatingFileId === file.s3_key) && (
-                  <Box 
+                <CircularProgress size={48} />
+                <Typography variant="body1" color="text.secondary">
+                  {refreshing ? 'Refreshing files...' : 'Loading files...'}
+                </Typography>
+              </Box>
+            </Box>
+          )}
+
+          {filteredFiles.length === 0 ? (
+            <Typography variant="body1" sx={{ mt: 2 }}>
+              {files.length === 0 ? 'No files uploaded yet.' : 'No files match your search.'}
+            </Typography>
+          ) : (
+            <Grid container spacing={2}>
+              {filteredFiles.map((file) => (
+                <Grid item xs={12} sm={6} md={4} lg={3} key={file.id}>
+                  <Card 
+                    variant="outlined" 
                     sx={{ 
-                      position: 'absolute', 
-                      top: 0, 
-                      left: 0, 
-                      right: 0, 
-                      bottom: 0, 
-                      display: 'flex', 
-                      alignItems: 'center', 
-                      justifyContent: 'center',
-                      zIndex: 1,
-                      backgroundColor: 'rgba(255, 255, 255, 0.7)'
+                      height: '100%',
+                      position: 'relative',
+                      opacity: updatingFileId === file.id || updatingFileId === file.s3_key ? 0.7 : 1,
+                      display: 'flex',
+                      flexDirection: 'column',
+                      transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                      borderRadius: 3,
+                      overflow: 'hidden',
+                      '&:hover': {
+                        transform: { xs: 'none', sm: 'translateY(-8px)' },
+                        boxShadow: { 
+                          xs: '0 2px 8px rgba(0,0,0,0.1)',
+                          sm: '0 8px 24px rgba(0,0,0,0.15)' 
+                        },
+                      },
+                      cursor: 'pointer',
+                      border: '1px solid',
+                      borderColor: 'divider',
                     }}
+                    onClick={() => handleCardClick(file)}
                   >
-                    <CircularProgress size={30} />
-                  </Box>
-                )}
-                
-                {getFileThumbnail(file)}
-                
-                <CardContent sx={{ flexGrow: 1, position: 'relative', p: { xs: 1.5, sm: 2 } }}>
-                  <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 1 }}>
-                    <Tooltip title={file.file_name} arrow>
-                      <Typography 
-                        variant="h6" 
-                        noWrap 
+                    {(updatingFileId === file.id || updatingFileId === file.s3_key) && (
+                      <Box 
                         sx={{ 
-                          maxWidth: { xs: '70%', sm: '80%' },
-                          fontSize: { xs: '0.95rem', sm: '1rem' },
-                          fontWeight: 600,
+                          position: 'absolute', 
+                          top: 0, 
+                          left: 0, 
+                          right: 0, 
+                          bottom: 0, 
+                          display: 'flex', 
+                          alignItems: 'center', 
+                          justifyContent: 'center',
+                          zIndex: 1,
+                          backgroundColor: 'rgba(255, 255, 255, 0.7)'
                         }}
                       >
-                        {file.file_name}
-                      </Typography>
-                    </Tooltip>
-                    <IconButton 
-                      aria-label="more" 
-                      onClick={(e) => handleClick(e, file)}
-                      size="small"
-                      sx={{ 
-                        zIndex: 2,
-                        '&:hover': {
-                          backgroundColor: 'action.hover',
-                        },
-                      }}
-                    >
-                      <MoreVertIcon />
-                    </IconButton>
-                  </Box>
-                  
-                  <Divider sx={{ my: 1.5 }} />
-                  
-                  <Box sx={{ mt: 1 }}>
-                    <Typography 
-                      variant="body2" 
-                      color="text.secondary"
-                      sx={{ fontSize: { xs: '0.75rem', sm: '0.875rem' }, mb: 0.5 }}
-                    >
-                      Size: {formatFileSize(file.metadata?.size)}
-                    </Typography>
-                    <Typography 
-                      variant="body2" 
-                      color="text.secondary"
-                      sx={{ fontSize: { xs: '0.75rem', sm: '0.875rem' }, mb: 1 }}
-                    >
-                      Modified: {formatDate(file.last_modified)}
-                    </Typography>
-                    <Box sx={{ display: 'flex', alignItems: 'center', mt: 1, justifyContent: 'space-between', flexWrap: 'wrap', gap: 1 }}>
-                      <Chip 
-                        icon={getTierIcon(file.metadata?.tier)} 
-                        label={getTierLabel(file.metadata?.tier)}
-                        size="small"
-                        color={file.metadata?.tier === 'glacier' ? 'info' : 'default'}
-                        variant={file.metadata?.tier === 'unarchiving' ? 'outlined' : 'filled'}
-                        sx={{ 
-                          fontSize: { xs: '0.7rem', sm: '0.75rem' },
-                          height: { xs: 20, sm: 24 },
-                        }}
-                      />
-                      <Tooltip title="Open in new tab">
-                        <OpenInNewIcon fontSize="small" color="action" />
-                      </Tooltip>
-                    </Box>
-                  </Box>
-                </CardContent>
-              </Card>
+                        <CircularProgress size={30} />
+                      </Box>
+                    )}
+                    
+                    {getFileThumbnail(file)}
+                    
+                    <CardContent sx={{ flexGrow: 1, position: 'relative', p: { xs: 1.5, sm: 2 } }}>
+                      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 1 }}>
+                        <Tooltip title={file.file_name} arrow>
+                          <Typography 
+                            variant="h6" 
+                            noWrap 
+                            sx={{ 
+                              maxWidth: { xs: '70%', sm: '80%' },
+                              fontSize: { xs: '0.95rem', sm: '1rem' },
+                              fontWeight: 600,
+                            }}
+                          >
+                            {file.file_name}
+                          </Typography>
+                        </Tooltip>
+                        <IconButton 
+                          aria-label="more" 
+                          onClick={(e) => handleClick(e, file)}
+                          size="small"
+                          sx={{ 
+                            zIndex: 2,
+                            '&:hover': {
+                              backgroundColor: 'action.hover',
+                            },
+                          }}
+                        >
+                          <MoreVertIcon />
+                        </IconButton>
+                      </Box>
+                      
+                      <Divider sx={{ my: 1.5 }} />
+                      
+                      <Box sx={{ mt: 1 }}>
+                        <Typography 
+                          variant="body2" 
+                          color="text.secondary"
+                          sx={{ fontSize: { xs: '0.75rem', sm: '0.875rem' }, mb: 0.5 }}
+                        >
+                          Size: {formatFileSize(file.metadata?.size)}
+                        </Typography>
+                        <Typography 
+                          variant="body2" 
+                          color="text.secondary"
+                          sx={{ fontSize: { xs: '0.75rem', sm: '0.875rem' }, mb: 1 }}
+                        >
+                          Modified: {formatDate(file.last_modified)}
+                        </Typography>
+                        <Box sx={{ display: 'flex', alignItems: 'center', mt: 1, justifyContent: 'space-between', flexWrap: 'wrap', gap: 1 }}>
+                          <Chip 
+                            icon={getTierIcon(file.metadata?.tier)} 
+                            label={getTierLabel(file.metadata?.tier)}
+                            size="small"
+                            color={file.metadata?.tier === 'glacier' ? 'info' : 'default'}
+                            variant={file.metadata?.tier === 'unarchiving' ? 'outlined' : 'filled'}
+                            sx={{ 
+                              fontSize: { xs: '0.7rem', sm: '0.75rem' },
+                              height: { xs: 20, sm: 24 },
+                            }}
+                          />
+                          <Tooltip title="Open in new tab">
+                            <OpenInNewIcon fontSize="small" color="action" />
+                          </Tooltip>
+                        </Box>
+                      </Box>
+                    </CardContent>
+                  </Card>
+                </Grid>
+              ))}
             </Grid>
-          ))}
-        </Grid>
+          )}
+        </Box>
       )}
 
       {totalPages > 1 && (
