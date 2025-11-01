@@ -38,15 +38,26 @@ const MediaScrollView = ({
   open, 
   onClose, 
   initialIndex = 0,
-  handleFileAction 
-}) => {
+  handleFileAction,
+  fetchMoreFiles, // Function to fetch next page
+  hasMorePages, // Boolean indicating if more pages exist
+  loadingMore, // Boolean indicating if more files are loading
+  currentPage, // Current page number
+} }) => {
   const [currentIndex, setCurrentIndex] = useState(initialIndex);
   const [loadingItems, setLoadingItems] = useState({});
+  const [allMediaFiles, setAllMediaFiles] = useState([]);
   const containerRef = useRef(null);
   const videoRefs = useRef({});
-  const mediaFiles = files.filter(file => 
-    isImage(file.file_name) || isVideo(file.file_name)
-  );
+  const isLoadingMoreRef = useRef(false);
+
+  // Filter and update media files when files change
+  useEffect(() => {
+    const mediaFiles = files.filter(file => 
+      isImage(file.file_name) || isVideo(file.file_name)
+    );
+    setAllMediaFiles(mediaFiles);
+  }, [files]);
 
   // Get storage tier icon
   const getTierIcon = (tier) => {
@@ -93,7 +104,7 @@ const MediaScrollView = ({
       });
 
       // Play the current video if it exists and is a video file
-      const currentFile = mediaFiles[currentIndex];
+      const currentFile = allMediaFiles[currentIndex];
       if (currentFile && isVideo(currentFile.file_name)) {
         const currentVideo = videoRefs.current[currentIndex];
         if (currentVideo) {
@@ -115,11 +126,32 @@ const MediaScrollView = ({
     }, 100);
 
     return () => clearTimeout(timeoutId);
-  }, [currentIndex, open, mediaFiles]);
+  }, [currentIndex, open, allMediaFiles]);
+
+  // Handle browser back button
+  useEffect(() => {
+    if (!open) return;
+
+    // Push a state to history when dialog opens
+    window.history.pushState({ mediaViewOpen: true }, '');
+
+    const handlePopState = () => {
+      // If back button is pressed and we're in media view, close it
+      if (open) {
+        onClose();
+      }
+    };
+
+    window.addEventListener('popstate', handlePopState);
+    
+    return () => {
+      window.removeEventListener('popstate', handlePopState);
+    };
+  }, [open, onClose]);
 
   useEffect(() => {
-    if (open && mediaFiles.length > 0) {
-      const index = Math.min(initialIndex, mediaFiles.length - 1);
+    if (open && allMediaFiles.length > 0) {
+      const index = Math.min(initialIndex, allMediaFiles.length - 1);
       setCurrentIndex(index);
       // Scroll to the current item after a brief delay to ensure DOM is ready
       setTimeout(() => {
@@ -131,7 +163,7 @@ const MediaScrollView = ({
         }
       }, 100);
     }
-  }, [open, initialIndex, mediaFiles.length]);
+  }, [open, initialIndex, allMediaFiles.length]);
 
   useEffect(() => {
     if (!open) return;
@@ -152,13 +184,16 @@ const MediaScrollView = ({
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [open, currentIndex, mediaFiles.length]);
+  }, [open, currentIndex, allMediaFiles.length]);
 
   const goToNext = () => {
-    if (currentIndex < mediaFiles.length - 1) {
+    if (currentIndex < allMediaFiles.length - 1) {
       const nextIndex = currentIndex + 1;
       setCurrentIndex(nextIndex);
       scrollToIndex(nextIndex);
+    } else if (hasMorePages && fetchMoreFiles && !isLoadingMoreRef.current) {
+      // Load next page if available
+      loadNextPage();
     }
   };
 
@@ -167,6 +202,19 @@ const MediaScrollView = ({
       const prevIndex = currentIndex - 1;
       setCurrentIndex(prevIndex);
       scrollToIndex(prevIndex);
+    }
+  };
+
+  const loadNextPage = async () => {
+    if (isLoadingMoreRef.current || !hasMorePages || !fetchMoreFiles) return;
+    
+    isLoadingMoreRef.current = true;
+    try {
+      await fetchMoreFiles();
+    } catch (error) {
+      console.error('Error loading more files:', error);
+    } finally {
+      isLoadingMoreRef.current = false;
     }
   };
 
@@ -184,14 +232,24 @@ const MediaScrollView = ({
 
     const scrollTop = e.target.scrollTop;
     const itemHeight = e.target.clientHeight;
+    const scrollHeight = e.target.scrollHeight;
     const newIndex = Math.round(scrollTop / itemHeight);
     
-    if (newIndex !== currentIndex && newIndex >= 0 && newIndex < mediaFiles.length) {
+    // Update current index
+    if (newIndex !== currentIndex && newIndex >= 0 && newIndex < allMediaFiles.length) {
       setCurrentIndex(newIndex);
+    }
+
+    // Check if near the end (within 2 items) and load more if available
+    const distanceFromBottom = scrollHeight - scrollTop - itemHeight;
+    const threshold = itemHeight * 2; // Load when 2 items away from bottom
+    
+    if (distanceFromBottom < threshold && hasMorePages && !loadingMore && !isLoadingMoreRef.current) {
+      loadNextPage();
     }
   };
 
-  if (mediaFiles.length === 0) {
+  if (allMediaFiles.length === 0 && !loadingMore) {
     return (
       <Dialog
         open={open}
@@ -260,14 +318,14 @@ const MediaScrollView = ({
           }}
         >
           <Typography variant="h6" sx={{ color: 'white', fontWeight: 600 }}>
-            {currentIndex + 1} / {mediaFiles.length}
+            {currentIndex + 1} / {allMediaFiles.length}{hasMorePages ? '+' : ''}
           </Typography>
           
           <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
-            {mediaFiles[currentIndex]?.metadata?.tier && (
+            {allMediaFiles[currentIndex]?.metadata?.tier && (
               <Chip
-                icon={getTierIcon(mediaFiles[currentIndex].metadata.tier)}
-                label={getTierLabel(mediaFiles[currentIndex].metadata.tier)}
+                icon={getTierIcon(allMediaFiles[currentIndex].metadata.tier)}
+                label={getTierLabel(allMediaFiles[currentIndex].metadata.tier)}
                 size="small"
                 sx={{
                   backgroundColor: 'rgba(255, 255, 255, 0.2)',
@@ -315,9 +373,9 @@ const MediaScrollView = ({
             },
           }}
         >
-          {mediaFiles.map((file, index) => (
+          {allMediaFiles.map((file, index) => (
             <Box
-              key={file.id || index}
+              key={file.id || `${file.s3_key}-${index}` || index}
               sx={{
                 height: '100vh',
                 display: 'flex',
@@ -422,6 +480,24 @@ const MediaScrollView = ({
               </Box>
             </Box>
           ))}
+          
+          {/* Loading indicator at the bottom when loading more */}
+          {loadingMore && (
+            <Box
+              sx={{
+                height: '100vh',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                flexDirection: 'column',
+                gap: 2,
+                color: 'white',
+              }}
+            >
+              <CircularProgress sx={{ color: 'white' }} />
+              <Typography variant="body1">Loading more media...</Typography>
+            </Box>
+          )}
         </Box>
 
         {/* Navigation Buttons */}
@@ -445,7 +521,7 @@ const MediaScrollView = ({
           </IconButton>
         )}
 
-        {currentIndex < mediaFiles.length - 1 && (
+        {(currentIndex < allMediaFiles.length - 1 || (hasMorePages && fetchMoreFiles)) && (
           <IconButton
             onClick={goToNext}
             sx={{
@@ -501,7 +577,7 @@ const MediaScrollView = ({
           <Tooltip title="Next (↓)">
             <IconButton
               onClick={goToNext}
-              disabled={currentIndex === mediaFiles.length - 1}
+              disabled={currentIndex === allMediaFiles.length - 1 && (!hasMorePages || loadingMore)}
               sx={{
                 color: 'white',
                 backgroundColor: 'rgba(255, 255, 255, 0.1)',
@@ -513,9 +589,15 @@ const MediaScrollView = ({
                 },
               }}
             >
-              <ArrowDownwardIcon />
+              {loadingMore ? <CircularProgress size={24} sx={{ color: 'white' }} /> : <ArrowDownwardIcon />}
             </IconButton>
           </Tooltip>
+          {loadingMore && (
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, color: 'white' }}>
+              <CircularProgress size={20} sx={{ color: 'white' }} />
+              <Typography variant="body2">Loading more...</Typography>
+            </Box>
+          )}
         </Box>
       </Box>
     </Dialog>

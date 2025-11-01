@@ -82,6 +82,7 @@ const FileList = ({
   // State for scrollable media view
   const [scrollableViewOpen, setScrollableViewOpen] = useState(false);
   const [selectedMediaIndex, setSelectedMediaIndex] = useState(0);
+  const [loadingMoreMedia, setLoadingMoreMedia] = useState(false);
 
   // Fetch files from the API
   const fetchFiles = async (pageNum = 1, useCache = false, isRefresh = false) => {
@@ -203,6 +204,37 @@ const FileList = ({
       setTierChangeError(err.response?.data?.error || 'Failed to change file tier. Please try again.');
     } finally {
       setTierChangeLoading(false);
+    }
+  };
+
+  // Function to fetch next page for media view (appends to existing files)
+  const fetchNextPageForMedia = async () => {
+    if (page >= totalPages || loadingMoreMedia) return;
+    
+    setLoadingMoreMedia(true);
+    try {
+      const nextPage = page + 1;
+      const params = { 
+        page: nextPage,
+        per_page: itemsPerPage,
+        use_cache: false
+      };
+      
+      const response = await axios.get(
+        `${import.meta.env.VITE_BACKEND_URL}/api/v3/files/`, 
+        { params }
+      );
+      
+      // Append new files to existing ones
+      setFiles(prevFiles => [...prevFiles, ...response.data.files]);
+      setTotalPages(response.data.total_pages || totalPages);
+      setTotalFiles(response.data.total || totalFiles);
+      setPage(nextPage);
+      
+    } catch (err) {
+      console.error('Error fetching next page for media:', err);
+    } finally {
+      setLoadingMoreMedia(false);
     }
   };
 
@@ -996,6 +1028,10 @@ const FileList = ({
         onClose={() => setScrollableViewOpen(false)}
         initialIndex={selectedMediaIndex}
         handleFileAction={handleFileAction}
+        fetchMoreFiles={fetchNextPageForMedia}
+        hasMorePages={page < totalPages}
+        loadingMore={loadingMoreMedia}
+        currentPage={page}
       />
     </Box>
   );
