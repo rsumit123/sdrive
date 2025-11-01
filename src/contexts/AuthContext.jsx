@@ -33,26 +33,8 @@ export const AuthProvider = ({ children }) => {
     checkAuthStatus();
   }, []);
 
-  // Add an interceptor to attach the token to outgoing requests on the main axios instance
-  useEffect(() => {
-    const token = user?.token;
-    if (token) {
-      const interceptor = axios.interceptors.request.use(
-        (config) => {
-          config.headers['Authorization'] = `Bearer ${token}`;
-          return config;
-        },
-        (error) => {
-          return Promise.reject(error);
-        }
-      );
-
-      // Cleanup the interceptor on unmount or when token changes
-      return () => {
-        axios.interceptors.request.eject(interceptor);
-      };
-    }
-  }, [user]);
+  // Note: We don't need a separate interceptor here because App.jsx already has a global
+  // axios interceptor that reads from localStorage directly, which is more reliable.
 
   const register = async (email, password) => {
     try {
