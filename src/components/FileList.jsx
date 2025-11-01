@@ -24,6 +24,7 @@ import {
   DialogContent,
   DialogContentText,
   DialogActions,
+  Snackbar,
 } from '@mui/material';
 import MoreVertIcon from '@mui/icons-material/MoreVert';
 import DownloadIcon from '@mui/icons-material/Download';
@@ -39,6 +40,7 @@ import InsertDriveFileIcon from '@mui/icons-material/InsertDriveFile';
 import OpenInNewIcon from '@mui/icons-material/OpenInNew';
 import ArchiveIcon from '@mui/icons-material/Archive';
 import UnarchiveIcon from '@mui/icons-material/Unarchive';
+import ContentCopyIcon from '@mui/icons-material/ContentCopy';
 import axios from 'axios';
 
 const FileList = ({
@@ -69,6 +71,9 @@ const FileList = ({
   const [tierChangeTarget, setTierChangeTarget] = useState(null);
   const [tierChangeLoading, setTierChangeLoading] = useState(false);
   const [tierChangeError, setTierChangeError] = useState('');
+
+  // State for copy link snackbar
+  const [copySnackbarOpen, setCopySnackbarOpen] = useState(false);
 
   // Fetch files from the API
   const fetchFiles = async (pageNum = 1, useCache = false, isRefresh = false) => {
@@ -276,6 +281,46 @@ const FileList = ({
     setTierChangeDialogOpen(false);
     setTierChangeTarget(null);
     setTierChangeError('');
+  };
+
+  // Handle copy file link to clipboard
+  const handleCopyLink = async (file) => {
+    if (!file || !file.simple_url) {
+      console.error('File or URL is missing');
+      return;
+    }
+
+    try {
+      await navigator.clipboard.writeText(file.simple_url);
+      setCopySnackbarOpen(true);
+      handleClose(); // Close the menu after copying
+    } catch (err) {
+      console.error('Failed to copy link to clipboard:', err);
+      // Fallback for older browsers
+      const textArea = document.createElement('textarea');
+      textArea.value = file.simple_url;
+      textArea.style.position = 'fixed';
+      textArea.style.opacity = '0';
+      document.body.appendChild(textArea);
+      textArea.select();
+      try {
+        document.execCommand('copy');
+        setCopySnackbarOpen(true);
+        handleClose();
+      } catch (fallbackErr) {
+        console.error('Fallback copy also failed:', fallbackErr);
+        alert('Failed to copy link. Please copy manually: ' + file.simple_url);
+      }
+      document.body.removeChild(textArea);
+    }
+  };
+
+  // Handle snackbar close
+  const handleSnackbarClose = (event, reason) => {
+    if (reason === 'clickaway') {
+      return;
+    }
+    setCopySnackbarOpen(false);
   };
 
   // Custom file action handlers that extend the provided handlers
@@ -613,6 +658,12 @@ const FileList = ({
       >
         {selectedFileForMenu && [
           <MUIMenuItem
+            key="copyLink"
+            onClick={() => handleCopyLink(selectedFileForMenu)}
+          >
+            <ContentCopyIcon style={{ marginRight: '8px' }} /> Copy Link
+          </MUIMenuItem>,
+          <MUIMenuItem
             key="download"
             onClick={() => {
               extendedFileActions.download(selectedFileForMenu.id, selectedFileForMenu.file_name);
@@ -702,6 +753,18 @@ const FileList = ({
           </Button>
         </DialogActions>
       </Dialog>
+
+      {/* Copy Link Success Snackbar */}
+      <Snackbar
+        open={copySnackbarOpen}
+        autoHideDuration={3000}
+        onClose={handleSnackbarClose}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+      >
+        <Alert onClose={handleSnackbarClose} severity="success" sx={{ width: '100%' }}>
+          File link copied to clipboard!
+        </Alert>
+      </Snackbar>
     </Box>
   );
 };
