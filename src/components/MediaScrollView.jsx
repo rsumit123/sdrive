@@ -43,6 +43,7 @@ const MediaScrollView = ({
   const [currentIndex, setCurrentIndex] = useState(initialIndex);
   const [loadingItems, setLoadingItems] = useState({});
   const containerRef = useRef(null);
+  const videoRefs = useRef({});
   const mediaFiles = files.filter(file => 
     isImage(file.file_name) || isVideo(file.file_name)
   );
@@ -71,16 +72,64 @@ const MediaScrollView = ({
     }
   };
 
+  // Effect to control video playback when currentIndex changes
   useEffect(() => {
-    if (open && mediaFiles.length > 0) {
-      setCurrentIndex(Math.min(initialIndex, mediaFiles.length - 1));
-      // Scroll to the current item
-      if (containerRef.current) {
-        const element = containerRef.current.children[currentIndex];
-        if (element) {
-          element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    if (!open) return;
+
+    // Small delay to ensure DOM is ready
+    const timeoutId = setTimeout(() => {
+      // Pause all videos first
+      Object.keys(videoRefs.current).forEach((key) => {
+        const idx = parseInt(key);
+        const video = videoRefs.current[key];
+        if (video && idx !== currentIndex) {
+          try {
+            video.pause();
+            video.currentTime = 0; // Reset to beginning
+          } catch (e) {
+            // Ignore errors
+          }
+        }
+      });
+
+      // Play the current video if it exists and is a video file
+      const currentFile = mediaFiles[currentIndex];
+      if (currentFile && isVideo(currentFile.file_name)) {
+        const currentVideo = videoRefs.current[currentIndex];
+        if (currentVideo) {
+          // Reset video to beginning and play
+          currentVideo.currentTime = 0;
+          const playPromise = currentVideo.play();
+          if (playPromise !== undefined) {
+            playPromise
+              .then(() => {
+                // Video started playing successfully
+              })
+              .catch(error => {
+                // Auto-play was prevented, might need user interaction
+                console.log('Video autoplay prevented, user interaction may be required:', error);
+              });
+          }
         }
       }
+    }, 100);
+
+    return () => clearTimeout(timeoutId);
+  }, [currentIndex, open, mediaFiles]);
+
+  useEffect(() => {
+    if (open && mediaFiles.length > 0) {
+      const index = Math.min(initialIndex, mediaFiles.length - 1);
+      setCurrentIndex(index);
+      // Scroll to the current item after a brief delay to ensure DOM is ready
+      setTimeout(() => {
+        if (containerRef.current) {
+          const element = containerRef.current.children[index];
+          if (element) {
+            element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          }
+        }
+      }, 100);
     }
   }, [open, initialIndex, mediaFiles.length]);
 
@@ -299,16 +348,38 @@ const MediaScrollView = ({
               ) : (
                 <Box
                   component="video"
+                  ref={(el) => {
+                    if (el) {
+                      videoRefs.current[index] = el;
+                    } else {
+                      delete videoRefs.current[index];
+                    }
+                  }}
                   src={file.simple_url}
                   controls
-                  autoPlay={index === currentIndex}
+                  muted={false}
+                  playsInline
                   sx={{
                     maxWidth: '100%',
                     maxHeight: '100%',
                     objectFit: 'contain',
                   }}
                   onLoadStart={() => setLoadingItems(prev => ({ ...prev, [index]: true }))}
-                  onLoadedData={() => setLoadingItems(prev => ({ ...prev, [index]: false }))}
+                  onLoadedData={() => {
+                    setLoadingItems(prev => ({ ...prev, [index]: false }));
+                    // Auto-play if this is the current video
+                    if (index === currentIndex) {
+                      const video = videoRefs.current[index];
+                      if (video) {
+                        const playPromise = video.play();
+                        if (playPromise !== undefined) {
+                          playPromise.catch(error => {
+                            console.log('Video autoplay prevented:', error);
+                          });
+                        }
+                      }
+                    }
+                  }}
                   onError={() => setLoadingItems(prev => ({ ...prev, [index]: false }))}
                 />
               )}
