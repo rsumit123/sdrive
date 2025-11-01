@@ -627,29 +627,46 @@ const FileList = ({
         <Typography variant="h6" gutterBottom>
           Uploaded Files
         </Typography>
-        {files.filter(f => isImage(f.file_name) || isVideo(f.file_name)).length > 0 && (
-          <Tooltip title="Scrollable Media View">
-            <IconButton
-              onClick={() => {
-                const mediaFiles = files.filter(f => isImage(f.file_name) || isVideo(f.file_name));
-                if (mediaFiles.length > 0) {
-                  setSelectedMediaIndex(0);
-                  setScrollableViewOpen(true);
-                }
-              }}
-              color="primary"
-              sx={{
-                backgroundColor: 'primary.main',
-                color: 'white',
-                '&:hover': {
-                  backgroundColor: 'primary.dark',
-                },
-              }}
-            >
-              <ViewStreamIcon />
-            </IconButton>
-          </Tooltip>
-        )}
+        {(() => {
+          // Check both files and filteredFiles for media
+          const allFiles = filteredFiles.length > 0 ? filteredFiles : files;
+          const mediaFiles = allFiles.filter(f => {
+            if (!f || !f.file_name) return false;
+            return isImage(f.file_name) || isVideo(f.file_name);
+          });
+          
+          console.log('Media files check:', {
+            totalFiles: files.length,
+            filteredFiles: filteredFiles.length,
+            mediaFilesCount: mediaFiles.length,
+            sampleFileNames: files.slice(0, 3).map(f => f?.file_name)
+          });
+          
+          return mediaFiles.length > 0 ? (
+            <Tooltip title={`Open Scrollable Media View (${mediaFiles.length} ${mediaFiles.length === 1 ? 'file' : 'files'})`}>
+              <Button
+                variant="contained"
+                color="primary"
+                startIcon={<ViewStreamIcon />}
+                onClick={() => {
+                  const allMediaFiles = files.filter(f => isImage(f.file_name) || isVideo(f.file_name));
+                  if (allMediaFiles.length > 0) {
+                    setSelectedMediaIndex(0);
+                    setScrollableViewOpen(true);
+                  }
+                }}
+                sx={{
+                  borderRadius: 2,
+                  textTransform: 'none',
+                  fontWeight: 500,
+                  boxShadow: 2,
+                }}
+              >
+                Media View ({mediaFiles.length})
+              </Button>
+            </Tooltip>
+          ) : null;
+        })()}
       </Box>
 
       {error && (
