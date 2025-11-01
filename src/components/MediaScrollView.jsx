@@ -43,7 +43,7 @@ const MediaScrollView = ({
   hasMorePages, // Boolean indicating if more pages exist
   loadingMore, // Boolean indicating if more files are loading
   currentPage, // Current page number
-} }) => {
+}) => {
   const [currentIndex, setCurrentIndex] = useState(initialIndex);
   const [loadingItems, setLoadingItems] = useState({});
   const [allMediaFiles, setAllMediaFiles] = useState([]);
