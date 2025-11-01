@@ -758,10 +758,15 @@ const FileList = ({
             onChange={handlePageChange} 
             color="primary"
             disabled={loading || refreshing}
-            size={{ xs: 'small', sm: 'medium' }}
+            size="small"
             sx={{
               '& .MuiPaginationItem-root': {
                 borderRadius: 2,
+              },
+              '& .MuiPaginationItem-sizeSmall': {
+                fontSize: { xs: '0.75rem', sm: '0.875rem' },
+                minWidth: { xs: 32, sm: 36 },
+                height: { xs: 32, sm: 36 },
               },
             }}
           />
