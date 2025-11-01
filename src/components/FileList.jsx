@@ -42,7 +42,10 @@ import OpenInNewIcon from '@mui/icons-material/OpenInNew';
 import ArchiveIcon from '@mui/icons-material/Archive';
 import UnarchiveIcon from '@mui/icons-material/Unarchive';
 import ContentCopyIcon from '@mui/icons-material/ContentCopy';
+import ViewModuleIcon from '@mui/icons-material/ViewModule';
+import ViewStreamIcon from '@mui/icons-material/ViewStream';
 import axios from 'axios';
+import MediaScrollView from './MediaScrollView';
 
 const FileList = ({
   uploadedFiles: initialFiles,
@@ -75,6 +78,10 @@ const FileList = ({
 
   // State for copy link snackbar
   const [copySnackbarOpen, setCopySnackbarOpen] = useState(false);
+
+  // State for scrollable media view
+  const [scrollableViewOpen, setScrollableViewOpen] = useState(false);
+  const [selectedMediaIndex, setSelectedMediaIndex] = useState(0);
 
   // Fetch files from the API
   const fetchFiles = async (pageNum = 1, useCache = false, isRefresh = false) => {
@@ -262,8 +269,21 @@ const FileList = ({
     setSelectedFileForMenu(null);
   };
 
-  // Handle card click to open file in new tab
+  // Handle card click to open file in new tab or scrollable view
   const handleCardClick = (file) => {
+    // If it's a media file, open in scrollable view
+    if ((isImage(file.file_name) || isVideo(file.file_name)) && files.length > 0) {
+      const mediaFiles = files.filter(f => isImage(f.file_name) || isVideo(f.file_name));
+      const mediaIndex = mediaFiles.findIndex(f => 
+        f.id === file.id || f.s3_key === file.s3_key
+      );
+      if (mediaIndex !== -1) {
+        setSelectedMediaIndex(mediaIndex);
+        setScrollableViewOpen(true);
+        return;
+      }
+    }
+    // Otherwise, open in new tab
     if (file && file.simple_url) {
       window.open(file.simple_url, '_blank', 'noopener,noreferrer');
     }
@@ -607,6 +627,29 @@ const FileList = ({
         <Typography variant="h6" gutterBottom>
           Uploaded Files
         </Typography>
+        {files.filter(f => isImage(f.file_name) || isVideo(f.file_name)).length > 0 && (
+          <Tooltip title="Scrollable Media View">
+            <IconButton
+              onClick={() => {
+                const mediaFiles = files.filter(f => isImage(f.file_name) || isVideo(f.file_name));
+                if (mediaFiles.length > 0) {
+                  setSelectedMediaIndex(0);
+                  setScrollableViewOpen(true);
+                }
+              }}
+              color="primary"
+              sx={{
+                backgroundColor: 'primary.main',
+                color: 'white',
+                '&:hover': {
+                  backgroundColor: 'primary.dark',
+                },
+              }}
+            >
+              <ViewStreamIcon />
+            </IconButton>
+          </Tooltip>
+        )}
       </Box>
 
       {error && (
@@ -928,6 +971,15 @@ const FileList = ({
           File link copied to clipboard!
         </Alert>
       </Snackbar>
+
+      {/* Media Scrollable View */}
+      <MediaScrollView
+        files={files}
+        open={scrollableViewOpen}
+        onClose={() => setScrollableViewOpen(false)}
+        initialIndex={selectedMediaIndex}
+        handleFileAction={handleFileAction}
+      />
     </Box>
   );
 };
