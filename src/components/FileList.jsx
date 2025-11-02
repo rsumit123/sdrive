@@ -463,17 +463,29 @@ const FileList = ({
     }
   }, [window.fileRenamed]);
 
-  // Filter files based on search text and type filter
-  const filteredFiles = files.filter((file) => {
-    const matchesSearch = file.file_name.toLowerCase().includes(searchText.toLowerCase());
-    if (!matchesSearch) return false;
-    
-    if (filter === 'all') return true;
-    if (filter === 'images') return isImage(file.file_name);
-    if (filter === 'videos') return isVideo(file.file_name);
-    if (filter === 'docs') return isPDF(file.file_name) || !isImage(file.file_name) && !isVideo(file.file_name);
-    return true;
-  });
+  // Check if file is an image
+  const isImage = (fileName) => {
+    if (!fileName) return false;
+    const imageExtensions = ['.jpg', '.jpeg', '.png', '.gif', '.bmp', '.webp', '.svg'];
+    return imageExtensions.some(ext => 
+      fileName.toLowerCase().endsWith(ext)
+    );
+  };
+
+  // Check if file is a video
+  const isVideo = (fileName) => {
+    if (!fileName) return false;
+    const videoExtensions = ['.mp4', '.webm', '.ogg', '.mov', '.avi', '.wmv', '.flv', '.mkv'];
+    return videoExtensions.some(ext => 
+      fileName.toLowerCase().endsWith(ext)
+    );
+  };
+
+  // Check if file is a PDF
+  const isPDF = (fileName) => {
+    if (!fileName) return false;
+    return fileName.toLowerCase().endsWith('.pdf');
+  };
 
   // Get storage tier icon
   const getTierIcon = (tier) => {
@@ -499,26 +511,17 @@ const FileList = ({
     }
   };
 
-  // Check if file is an image
-  const isImage = (fileName) => {
-    const imageExtensions = ['.jpg', '.jpeg', '.png', '.gif', '.bmp', '.webp', '.svg'];
-    return imageExtensions.some(ext => 
-      fileName.toLowerCase().endsWith(ext)
-    );
-  };
-
-  // Check if file is a video
-  const isVideo = (fileName) => {
-    const videoExtensions = ['.mp4', '.webm', '.ogg', '.mov', '.avi', '.wmv', '.flv', '.mkv'];
-    return videoExtensions.some(ext => 
-      fileName.toLowerCase().endsWith(ext)
-    );
-  };
-
-  // Check if file is a PDF
-  const isPDF = (fileName) => {
-    return fileName.toLowerCase().endsWith('.pdf');
-  };
+  // Filter files based on search text and type filter
+  const filteredFiles = files.filter((file) => {
+    const matchesSearch = file.file_name.toLowerCase().includes(searchText.toLowerCase());
+    if (!matchesSearch) return false;
+    
+    if (filter === 'all') return true;
+    if (filter === 'images') return isImage(file.file_name);
+    if (filter === 'videos') return isVideo(file.file_name);
+    if (filter === 'docs') return isPDF(file.file_name) || (!isImage(file.file_name) && !isVideo(file.file_name));
+    return true;
+  });
 
   // Get file icon based on type
   const getFileIcon = (fileName) => {
