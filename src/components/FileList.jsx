@@ -1011,71 +1011,71 @@ const FileList = ({
                         </Box>
                       </ListItemAvatar>
                       <ListItemText
-                        primary={
-                          <Typography
-                            variant="body1"
-                            sx={{
-                              fontWeight: 500,
-                              fontSize: { xs: '0.938rem', sm: '1rem' },
-                              mb: 0.25,
-                              color: '#1e293b',
-                              overflow: 'hidden',
-                              textOverflow: 'ellipsis',
-                              whiteSpace: 'nowrap',
-                              pr: 1,
-                            }}
-                          >
-                            {file.file_name}
-                          </Typography>
-                        }
-                        secondary={
-                          <Box sx={{ display: 'flex', gap: 0.5, alignItems: 'center', mt: 0.25 }}>
-                            <Typography variant="caption" sx={{ color: '#64748b', fontSize: '0.75rem' }}>
-                              {formatFileSize(file.metadata?.size)}
-                            </Typography>
-                            <Typography variant="caption" sx={{ color: '#cbd5e1', mx: 0.25 }}>
-                              •
-                            </Typography>
-                            <Typography variant="caption" sx={{ color: '#64748b', fontSize: '0.75rem' }}>
-                              {formatDate(file.last_modified)}
-                            </Typography>
-                          </Box>
-                        }
-                        sx={{ flex: 1, minWidth: 0 }}
-                      />
-                      <ListItemSecondaryAction>
-                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                          <Tooltip title={getTierLabel(file.metadata?.tier)} arrow>
-                            <Box
+                          primary={
+                            <Typography
+                              variant="body1"
                               sx={{
-                                display: 'inline-flex',
-                                alignItems: 'center',
-                                justifyContent: 'center',
-                                width: 20,
-                                height: 20,
-                                borderRadius: '50%',
-                                backgroundColor: file.metadata?.tier === 'glacier' ? 'info.light' : 'grey.200',
-                                color: file.metadata?.tier === 'glacier' ? 'info.main' : 'grey.700',
+                                fontWeight: 500,
+                                fontSize: { xs: '0.938rem', sm: '1rem' },
+                                mb: 0.25,
+                                color: '#1e293b',
+                                overflow: 'hidden',
+                                textOverflow: 'ellipsis',
+                                whiteSpace: 'nowrap',
+                                pr: 6,
                               }}
                             >
-                              {getTierIcon(file.metadata?.tier)}
+                              {file.file_name}
+                            </Typography>
+                          }
+                          secondary={
+                            <Box sx={{ display: 'flex', gap: 0.5, alignItems: 'center', mt: 0.25 }}>
+                              <Typography variant="caption" sx={{ color: '#64748b', fontSize: '0.75rem' }}>
+                                {formatFileSize(file.metadata?.size)}
+                              </Typography>
+                              <Typography variant="caption" sx={{ color: '#cbd5e1', mx: 0.25 }}>
+                                •
+                              </Typography>
+                              <Typography variant="caption" sx={{ color: '#64748b', fontSize: '0.75rem' }}>
+                                {formatDate(file.last_modified)}
+                              </Typography>
                             </Box>
-                          </Tooltip>
-                          <IconButton
-                            edge="end"
-                            onClick={(e) => handleClick(e, file)}
-                            size="small"
-                            sx={{
-                              width: { xs: 40, sm: 32 },
-                              height: { xs: 40, sm: 32 },
-                              minWidth: { xs: 40, sm: 32 },
-                              minHeight: { xs: 40, sm: 32 },
-                            }}
-                          >
-                            <MoreVertIcon fontSize="small" />
-                          </IconButton>
-                        </Box>
-                      </ListItemSecondaryAction>
+                          }
+                          sx={{ flex: 1, minWidth: 0, pr: 8 }}
+                        />
+                        <ListItemSecondaryAction>
+                          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, ml: 1 }}>
+                            <Tooltip title={getTierLabel(file.metadata?.tier)} arrow>
+                              <Box
+                                sx={{
+                                  display: 'inline-flex',
+                                  alignItems: 'center',
+                                  justifyContent: 'center',
+                                  width: 20,
+                                  height: 20,
+                                  borderRadius: '50%',
+                                  backgroundColor: file.metadata?.tier === 'glacier' ? 'info.light' : 'grey.200',
+                                  color: file.metadata?.tier === 'glacier' ? 'info.main' : 'grey.700',
+                                }}
+                              >
+                                {getTierIcon(file.metadata?.tier)}
+                              </Box>
+                            </Tooltip>
+                            <IconButton
+                              edge="end"
+                              onClick={(e) => handleClick(e, file)}
+                              size="small"
+                              sx={{
+                                width: { xs: 40, sm: 32 },
+                                height: { xs: 40, sm: 32 },
+                                minWidth: { xs: 40, sm: 32 },
+                                minHeight: { xs: 40, sm: 32 },
+                              }}
+                            >
+                              <MoreVertIcon fontSize="small" />
+                            </IconButton>
+                          </Box>
+                        </ListItemSecondaryAction>
                       {(updatingFileId === file.id || updatingFileId === file.s3_key) && (
                         <Box
                           sx={{
