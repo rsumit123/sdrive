@@ -575,7 +575,7 @@ const FileUpload = ({ setShowCmdUpload }) => {
         sx={{
           backgroundColor: 'white',
           borderBottom: '1px solid',
-          borderColor: 'divider',
+          borderColor: '#e2e8f0',
           position: 'sticky',
           top: 0,
           zIndex: 100,

@@ -299,12 +299,14 @@ const FileList = ({
     const isSameYear = date.getFullYear() === now.getFullYear();
     
     if (isSameYear) {
-      return date.toLocaleDateString('en-US', {
-        month: 'short',
-        day: 'numeric',
-        hour: '2-digit',
-        minute: '2-digit',
-      });
+      const month = date.toLocaleDateString('en-US', { month: 'short' });
+      const day = date.getDate();
+      let hours = date.getHours();
+      const minutes = date.getMinutes().toString().padStart(2, '0');
+      const ampm = hours >= 12 ? 'PM' : 'AM';
+      hours = hours % 12;
+      hours = hours ? hours : 12; // the hour '0' should be '12'
+      return `${month} ${day}, ${hours}:${minutes} ${ampm}`;
     } else {
       return date.toLocaleDateString('en-US', {
         day: 'numeric',
@@ -677,105 +679,130 @@ const FileList = ({
 
       {/* Modern Search Bar */}
       <Box sx={{ mb: 2 }}>
-        <TextField
-          placeholder="Search files..."
-          variant="outlined"
-          fullWidth
-          value={searchText}
-          onChange={(e) => setSearchText(e.target.value)}
-          InputProps={{
-            startAdornment: (
-              <InputAdornment position="start">
-                <SearchIcon sx={{ color: 'text.secondary', fontSize: 20 }} />
-              </InputAdornment>
-            ),
-            endAdornment: (
-              <InputAdornment position="end">
-                <IconButton
-                  size="small"
-                  onClick={refreshFiles}
-                  disabled={refreshing}
-                  sx={{
-                    mr: -1,
-                    width: 32,
-                    height: 32,
-                    backgroundColor: 'transparent',
-                    '&:hover': {
-                      backgroundColor: 'rgba(0,0,0,0.04)',
-                    },
-                  }}
-                >
-                  {refreshing ? <CircularProgress size={18} /> : <RefreshIcon fontSize="small" />}
-                </IconButton>
-              </InputAdornment>
-            ),
-          }}
-          sx={{
-            '& .MuiOutlinedInput-root': {
-              borderRadius: 3,
-              backgroundColor: '#f9fafb',
-              height: { xs: 44, sm: 48 },
-              '& fieldset': {
-                borderColor: '#e5e7eb',
-              },
-              '&:hover fieldset': {
-                borderColor: '#d1d5db',
-              },
-              '&.Mui-focused': {
-                boxShadow: '0 0 0 2px rgba(99, 102, 241, 0.2)',
-                '& fieldset': {
-                  borderColor: 'primary.main',
-                },
-              },
-            },
-          }}
-        />
-      </Box>
-
-      {/* Filter Chips */}
-      <Box 
-        sx={{ 
-          display: 'flex', 
-          gap: 1, 
-          mb: 3, 
-          flexWrap: 'nowrap',
-          overflowX: 'auto',
-          pb: 1,
-          '&::-webkit-scrollbar': {
-            display: 'none',
-          },
-          scrollbarWidth: 'none',
-        }}
-      >
-        {['all', 'images', 'videos', 'docs'].map((filterType) => (
-          <Chip
-            key={filterType}
-            label={filterType.charAt(0).toUpperCase() + filterType.slice(1)}
-            onClick={() => setFilter(filterType)}
-            size="small"
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+          <TextField
+            placeholder="Search files..."
+            variant="outlined"
+            fullWidth
+            value={searchText}
+            onChange={(e) => setSearchText(e.target.value)}
+            InputProps={{
+              startAdornment: (
+                <InputAdornment position="start">
+                  <SearchIcon sx={{ color: 'text.secondary', fontSize: 20 }} />
+                </InputAdornment>
+              ),
+            }}
             sx={{
-              backgroundColor: filter === filterType ? 'primary.main' : 'transparent',
-              color: filter === filterType ? 'white' : '#64748b',
-              fontWeight: filter === filterType ? 600 : 500,
-              border: filter === filterType ? 'none' : '1px solid #e2e8f0',
-              px: 2,
-              py: 1.5,
-              borderRadius: '9999px',
-              fontSize: '0.813rem',
-              cursor: 'pointer',
-              minWidth: 'auto',
-              '&:hover': {
-                backgroundColor: filter === filterType ? 'primary.dark' : '#f1f5f9',
+              '& .MuiOutlinedInput-root': {
+                borderRadius: 3,
+                backgroundColor: '#f9fafb',
+                height: { xs: 44, sm: 48 },
+                '& fieldset': {
+                  borderColor: '#e5e7eb',
+                },
+                '&:hover fieldset': {
+                  borderColor: '#d1d5db',
+                },
+                '&.Mui-focused': {
+                  boxShadow: '0 0 0 2px rgba(99, 102, 241, 0.2)',
+                  '& fieldset': {
+                    borderColor: 'primary.main',
+                  },
+                },
               },
             }}
           />
-        ))}
+          <IconButton
+            onClick={refreshFiles}
+            disabled={refreshing}
+            sx={{
+              width: { xs: 40, sm: 44 },
+              height: { xs: 44, sm: 48 },
+              backgroundColor: '#f9fafb',
+              border: '1px solid #e5e7eb',
+              borderRadius: 3,
+              '&:hover': {
+                backgroundColor: '#f1f5f9',
+              },
+            }}
+          >
+            {refreshing ? <CircularProgress size={18} /> : <RefreshIcon fontSize="small" />}
+          </IconButton>
+        </Box>
       </Box>
 
-      {/* File List Header */}
-      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+      {/* Filter Chips - Sticky */}
+      <Box 
+        sx={{ 
+          position: 'sticky',
+          top: { xs: 56, sm: 64 },
+          zIndex: 90,
+          backgroundColor: '#f3f4f6',
+          pt: 2,
+          pb: 1,
+          mb: 2,
+          mx: -3,
+          px: 3,
+        }}
+      >
+        <Box 
+          sx={{ 
+            display: 'flex', 
+            gap: 1, 
+            flexWrap: 'nowrap',
+            overflowX: 'auto',
+            '&::-webkit-scrollbar': {
+              display: 'none',
+            },
+            scrollbarWidth: 'none',
+          }}
+        >
+          {['all', 'images', 'videos', 'docs'].map((filterType) => (
+            <Chip
+              key={filterType}
+              label={filterType.charAt(0).toUpperCase() + filterType.slice(1)}
+              onClick={() => setFilter(filterType)}
+              size="small"
+              sx={{
+                backgroundColor: filter === filterType ? 'primary.main' : 'transparent',
+                color: filter === filterType ? 'white' : '#64748b',
+                fontWeight: filter === filterType ? 600 : 500,
+                border: filter === filterType ? 'none' : '1px solid #e2e8f0',
+                px: 2,
+                py: 1.5,
+                borderRadius: '9999px',
+                fontSize: '0.813rem',
+                cursor: 'pointer',
+                minWidth: { xs: 70, sm: 'auto' },
+                flexShrink: 0,
+                '&:hover': {
+                  backgroundColor: filter === filterType ? 'primary.dark' : '#f1f5f9',
+                },
+              }}
+            />
+          ))}
+        </Box>
+      </Box>
+
+      {/* File List Header - Sticky */}
+      <Box 
+        sx={{ 
+          display: 'flex', 
+          justifyContent: 'space-between', 
+          alignItems: 'center', 
+          position: 'sticky',
+          top: { xs: 120, sm: 128 },
+          zIndex: 89,
+          backgroundColor: '#f3f4f6',
+          py: 1,
+          mx: -3,
+          px: 3,
+          mb: 2,
+        }}
+      >
         <Typography variant="h6" sx={{ fontWeight: 600, fontSize: { xs: '1rem', sm: '1.25rem' } }}>
-          Uploaded Files ({filteredFiles.length})
+          Uploaded Files
         </Typography>
         <Box sx={{ display: 'flex', gap: 0.5, alignItems: 'center' }}>
           {(() => {
@@ -992,9 +1019,11 @@ const FileList = ({
                               fontSize: { xs: '0.938rem', sm: '1rem' },
                               mb: 0.25,
                               color: '#1e293b',
-                              flex: 1,
+                              overflow: 'hidden',
+                              textOverflow: 'ellipsis',
+                              whiteSpace: 'nowrap',
+                              pr: 1,
                             }}
-                            noWrap
                           >
                             {file.file_name}
                           </Typography>
@@ -1012,9 +1041,10 @@ const FileList = ({
                             </Typography>
                           </Box>
                         }
+                        sx={{ flex: 1, minWidth: 0 }}
                       />
                       <ListItemSecondaryAction>
-                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                           <Tooltip title={getTierLabel(file.metadata?.tier)} arrow>
                             <Box
                               sx={{
@@ -1036,8 +1066,10 @@ const FileList = ({
                             onClick={(e) => handleClick(e, file)}
                             size="small"
                             sx={{
-                              width: 32,
-                              height: 32,
+                              width: { xs: 40, sm: 32 },
+                              height: { xs: 40, sm: 32 },
+                              minWidth: { xs: 40, sm: 32 },
+                              minHeight: { xs: 40, sm: 32 },
                             }}
                           >
                             <MoreVertIcon fontSize="small" />
@@ -1163,25 +1195,28 @@ const FileList = ({
                           Modified: {formatDate(file.last_modified)}
                         </Typography>
                         <Box sx={{ display: 'flex', alignItems: 'center', mt: 1, justifyContent: 'space-between', flexWrap: 'wrap', gap: 1 }}>
-                          <Tooltip title={getTierLabel(file.metadata?.tier)} arrow>
-                            <Box
-                              sx={{
-                                display: 'inline-flex',
-                                alignItems: 'center',
-                                justifyContent: 'center',
-                                width: 24,
-                                height: 24,
-                                borderRadius: '50%',
-                                backgroundColor: file.metadata?.tier === 'glacier' ? 'info.light' : 'grey.200',
-                                color: file.metadata?.tier === 'glacier' ? 'info.main' : 'grey.700',
-                              }}
-                            >
-                              {getTierIcon(file.metadata?.tier)}
-                            </Box>
-                          </Tooltip>
-                          <Tooltip title="Open in new tab">
-                            <OpenInNewIcon fontSize="small" color="action" />
-                          </Tooltip>
+                          <Box sx={{ flex: 1 }} />
+                          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                            <Tooltip title={getTierLabel(file.metadata?.tier)} arrow>
+                              <Box
+                                sx={{
+                                  display: 'inline-flex',
+                                  alignItems: 'center',
+                                  justifyContent: 'center',
+                                  width: 24,
+                                  height: 24,
+                                  borderRadius: '50%',
+                                  backgroundColor: file.metadata?.tier === 'glacier' ? 'info.light' : 'grey.200',
+                                  color: file.metadata?.tier === 'glacier' ? 'info.main' : 'grey.700',
+                                }}
+                              >
+                                {getTierIcon(file.metadata?.tier)}
+                              </Box>
+                            </Tooltip>
+                            <Tooltip title="Open in new tab">
+                              <OpenInNewIcon fontSize="small" color="action" />
+                            </Tooltip>
+                          </Box>
                         </Box>
                       </Box>
                     </CardContent>
