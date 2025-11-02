@@ -952,18 +952,22 @@ const FileList = ({
                               {formatDate(file.last_modified)}
                             </Typography>
                             <Box sx={{ ml: 1 }}>
-                              <Chip
-                                icon={getTierIcon(file.metadata?.tier)}
-                                label={getTierLabel(file.metadata?.tier)}
-                                size="small"
-                                sx={{
-                                  height: 20,
-                                  fontSize: '0.7rem',
-                                  '& .MuiChip-icon': {
-                                    fontSize: '0.875rem',
-                                  },
-                                }}
-                              />
+                              <Tooltip title={getTierLabel(file.metadata?.tier)} arrow>
+                                <Box
+                                  sx={{
+                                    display: 'inline-flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    width: 20,
+                                    height: 20,
+                                    borderRadius: '50%',
+                                    backgroundColor: file.metadata?.tier === 'glacier' ? 'info.light' : 'grey.200',
+                                    color: file.metadata?.tier === 'glacier' ? 'info.main' : 'grey.700',
+                                  }}
+                                >
+                                  {getTierIcon(file.metadata?.tier)}
+                                </Box>
+                              </Tooltip>
                             </Box>
                           </Box>
                         }
@@ -1096,17 +1100,22 @@ const FileList = ({
                           Modified: {formatDate(file.last_modified)}
                         </Typography>
                         <Box sx={{ display: 'flex', alignItems: 'center', mt: 1, justifyContent: 'space-between', flexWrap: 'wrap', gap: 1 }}>
-                          <Chip
-                            icon={getTierIcon(file.metadata?.tier)}
-                            label={getTierLabel(file.metadata?.tier)}
-                            size="small"
-                            color={file.metadata?.tier === 'glacier' ? 'info' : 'default'}
-                            variant={file.metadata?.tier === 'unarchiving' ? 'outlined' : 'filled'}
-                            sx={{
-                              fontSize: { xs: '0.7rem', sm: '0.75rem' },
-                              height: { xs: 20, sm: 24 },
-                            }}
-                          />
+                          <Tooltip title={getTierLabel(file.metadata?.tier)} arrow>
+                            <Box
+                              sx={{
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                width: 24,
+                                height: 24,
+                                borderRadius: '50%',
+                                backgroundColor: file.metadata?.tier === 'glacier' ? 'info.light' : 'grey.200',
+                                color: file.metadata?.tier === 'glacier' ? 'info.main' : 'grey.700',
+                              }}
+                            >
+                              {getTierIcon(file.metadata?.tier)}
+                            </Box>
+                          </Tooltip>
                           <Tooltip title="Open in new tab">
                             <OpenInNewIcon fontSize="small" color="action" />
                           </Tooltip>
