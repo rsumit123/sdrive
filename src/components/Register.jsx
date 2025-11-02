@@ -116,7 +116,7 @@ function Register() {
               display: 'flex',
               flexDirection: 'column',
               alignItems: 'center',
-              mt: -4,
+              mt: { xs: -2, sm: -4 },
             }}
           >
             <Box
