@@ -580,7 +580,8 @@ const FileUpload = ({ setShowCmdUpload }) => {
           top: 0,
           zIndex: 100,
           px: { xs: 2, sm: 4 },
-          py: { xs: 1.5, sm: 2 },
+          pt: { xs: 3, sm: 4 },
+          pb: { xs: 2, sm: 2.5 },
         }}
       >
         <Box
@@ -590,16 +591,17 @@ const FileUpload = ({ setShowCmdUpload }) => {
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'space-between',
+            mb: 0.5,
           }}
         >
           <Box>
             <Typography
               variant="h5"
               sx={{
-                fontWeight: 700,
-                fontSize: { xs: '1.25rem', sm: '1.5rem' },
+                fontWeight: 600,
+                fontSize: { xs: '1.125rem', sm: '1.25rem' },
                 mb: 0.25,
-                color: '#1f2937',
+                color: '#0f172a',
               }}
             >
               SDrive
@@ -607,8 +609,8 @@ const FileUpload = ({ setShowCmdUpload }) => {
             <Typography
               variant="caption"
               sx={{
-                color: 'text.secondary',
-                fontSize: { xs: '0.75rem', sm: '0.875rem' },
+                color: '#64748b',
+                fontSize: { xs: '0.813rem', sm: '0.875rem' },
               }}
             >
               {formatFileSize(totalSpaceUsed)} used
@@ -617,13 +619,16 @@ const FileUpload = ({ setShowCmdUpload }) => {
           <IconButton
             onClick={handleSettingsClick}
             sx={{
-              backgroundColor: '#f3f4f6',
+              width: 36,
+              height: 36,
+              borderRadius: '50%',
+              backgroundColor: 'transparent',
               '&:hover': {
-                backgroundColor: '#e5e7eb',
+                backgroundColor: '#f1f5f9',
               },
             }}
           >
-            <MoreVertIcon />
+            <MoreVertIcon fontSize="small" />
           </IconButton>
         </Box>
       </Box>
@@ -688,7 +693,7 @@ const FileUpload = ({ setShowCmdUpload }) => {
         sx={{
           maxWidth: { xs: '100%', sm: '1200px' },
           mx: 'auto',
-          px: { xs: 2, sm: 4 },
+          px: { xs: 3, sm: 4 },
           pt: { xs: 2, sm: 3 },
         }}
       >
@@ -771,17 +776,20 @@ const FileUpload = ({ setShowCmdUpload }) => {
         onClick={() => setUploadSheetOpen(true)}
         sx={{
           position: 'fixed',
-          bottom: { xs: 80, sm: 24 },
+          bottom: { xs: 20, sm: 24 },
           right: { xs: 16, sm: 24 },
-          width: { xs: 56, sm: 64 },
-          height: { xs: 56, sm: 64 },
-          boxShadow: '0 8px 16px rgba(0,0,0,0.15)',
+          width: { xs: 56, sm: 56 },
+          height: { xs: 56, sm: 56 },
+          boxShadow: '0 4px 12px rgba(0,0,0,0.15), 0 2px 4px rgba(0,0,0,0.1)',
+          zIndex: 1000,
           '&:hover': {
-            boxShadow: '0 12px 24px rgba(0,0,0,0.2)',
+            boxShadow: '0 8px 16px rgba(0,0,0,0.2), 0 4px 8px rgba(0,0,0,0.15)',
+            transform: 'scale(1.05)',
           },
+          transition: 'all 0.2s ease-in-out',
         }}
       >
-        <UploadIcon sx={{ fontSize: { xs: 28, sm: 32 } }} />
+        <UploadIcon sx={{ fontSize: 28 }} />
       </Fab>
 
       {/* Upload Progress Indicator */}

@@ -291,16 +291,27 @@ const FileList = ({
     return totalBytes;
   };
 
-  // Format date to user-friendly format
+  // Format date to user-friendly format (shortened for mobile)
   const formatDate = (isoString) => {
     if (!isoString) return 'Unknown';
-    return new Date(isoString).toLocaleDateString('en-US', {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit',
-    });
+    const date = new Date(isoString);
+    const now = new Date();
+    const isSameYear = date.getFullYear() === now.getFullYear();
+    
+    if (isSameYear) {
+      return date.toLocaleDateString('en-US', {
+        month: 'short',
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit',
+      });
+    } else {
+      return date.toLocaleDateString('en-US', {
+        day: 'numeric',
+        month: 'short',
+        year: 'numeric',
+      });
+    }
   };
 
   // Handle file menu open
@@ -592,7 +603,7 @@ const FileList = ({
       {/* Storage Progress Bar */}
       {totalSpaceUsed !== undefined && (
         <Paper
-          elevation={0}
+          elevation={1}
           sx={{
             p: { xs: 2, sm: 3 },
             mb: 3,
@@ -600,6 +611,7 @@ const FileList = ({
             backgroundColor: 'white',
             border: '1px solid',
             borderColor: 'divider',
+            boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
           }}
         >
           <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
@@ -614,11 +626,11 @@ const FileList = ({
             variant="determinate"
             value={storagePercentage}
             sx={{
-              height: 8,
-              borderRadius: 4,
+              height: 6,
+              borderRadius: '9999px',
               backgroundColor: '#e5e7eb',
               '& .MuiLinearProgress-bar': {
-                borderRadius: 4,
+                borderRadius: '9999px',
               },
             }}
           />
@@ -634,10 +646,10 @@ const FileList = ({
                 textAlign: 'center',
               }}
             >
-              <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.7rem', textTransform: 'uppercase', letterSpacing: 0.5 }}>
+              <Typography variant="caption" sx={{ fontSize: '0.625rem', textTransform: 'uppercase', letterSpacing: '0.05em', color: '#94a3b8', display: 'block' }}>
                 Total Files
               </Typography>
-              <Typography variant="h6" sx={{ fontWeight: 700, fontSize: '1.25rem', mt: 0.25 }}>
+              <Typography variant="h6" sx={{ fontWeight: 700, fontSize: '1.25rem', mt: 0.25, color: '#1e293b' }}>
                 {totalFiles}
               </Typography>
             </Paper>
@@ -652,10 +664,10 @@ const FileList = ({
                 textAlign: 'center',
               }}
             >
-              <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.7rem', textTransform: 'uppercase', letterSpacing: 0.5 }}>
+              <Typography variant="caption" sx={{ fontSize: '0.625rem', textTransform: 'uppercase', letterSpacing: '0.05em', color: '#94a3b8', display: 'block' }}>
                 In View
               </Typography>
-              <Typography variant="h6" sx={{ fontWeight: 700, fontSize: '1.25rem', mt: 0.25 }}>
+              <Typography variant="h6" sx={{ fontWeight: 700, fontSize: '1.25rem', mt: 0.25, color: '#1e293b' }}>
                 {filteredFiles.length}
               </Typography>
             </Paper>
@@ -674,7 +686,7 @@ const FileList = ({
           InputProps={{
             startAdornment: (
               <InputAdornment position="start">
-                <SearchIcon sx={{ color: 'text.secondary' }} />
+                <SearchIcon sx={{ color: 'text.secondary', fontSize: 20 }} />
               </InputAdornment>
             ),
             endAdornment: (
@@ -685,9 +697,15 @@ const FileList = ({
                   disabled={refreshing}
                   sx={{
                     mr: -1,
+                    width: 32,
+                    height: 32,
+                    backgroundColor: 'transparent',
+                    '&:hover': {
+                      backgroundColor: 'rgba(0,0,0,0.04)',
+                    },
                   }}
                 >
-                  {refreshing ? <CircularProgress size={20} /> : <RefreshIcon />}
+                  {refreshing ? <CircularProgress size={18} /> : <RefreshIcon fontSize="small" />}
                 </IconButton>
               </InputAdornment>
             ),
@@ -696,14 +714,18 @@ const FileList = ({
             '& .MuiOutlinedInput-root': {
               borderRadius: 3,
               backgroundColor: '#f9fafb',
+              height: { xs: 44, sm: 48 },
               '& fieldset': {
                 borderColor: '#e5e7eb',
               },
               '&:hover fieldset': {
                 borderColor: '#d1d5db',
               },
-              '&.Mui-focused fieldset': {
-                borderColor: 'primary.main',
+              '&.Mui-focused': {
+                boxShadow: '0 0 0 2px rgba(99, 102, 241, 0.2)',
+                '& fieldset': {
+                  borderColor: 'primary.main',
+                },
               },
             },
           }}
@@ -711,7 +733,20 @@ const FileList = ({
       </Box>
 
       {/* Filter Chips */}
-      <Box sx={{ display: 'flex', gap: 1, mb: 3, flexWrap: 'wrap' }}>
+      <Box 
+        sx={{ 
+          display: 'flex', 
+          gap: 1, 
+          mb: 3, 
+          flexWrap: 'nowrap',
+          overflowX: 'auto',
+          pb: 1,
+          '&::-webkit-scrollbar': {
+            display: 'none',
+          },
+          scrollbarWidth: 'none',
+        }}
+      >
         {['all', 'images', 'videos', 'docs'].map((filterType) => (
           <Chip
             key={filterType}
@@ -719,11 +754,18 @@ const FileList = ({
             onClick={() => setFilter(filterType)}
             size="small"
             sx={{
-              backgroundColor: filter === filterType ? 'primary.main' : '#f3f4f6',
-              color: filter === filterType ? 'white' : '#6b7280',
+              backgroundColor: filter === filterType ? 'primary.main' : 'transparent',
+              color: filter === filterType ? 'white' : '#64748b',
               fontWeight: filter === filterType ? 600 : 500,
+              border: filter === filterType ? 'none' : '1px solid #e2e8f0',
+              px: 2,
+              py: 1.5,
+              borderRadius: '9999px',
+              fontSize: '0.813rem',
+              cursor: 'pointer',
+              minWidth: 'auto',
               '&:hover': {
-                backgroundColor: filter === filterType ? 'primary.dark' : '#e5e7eb',
+                backgroundColor: filter === filterType ? 'primary.dark' : '#f1f5f9',
               },
             }}
           />
@@ -735,7 +777,7 @@ const FileList = ({
         <Typography variant="h6" sx={{ fontWeight: 600, fontSize: { xs: '1rem', sm: '1.25rem' } }}>
           Uploaded Files ({filteredFiles.length})
         </Typography>
-        <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
+        <Box sx={{ display: 'flex', gap: 0.5, alignItems: 'center' }}>
           {(() => {
             const allFiles = filteredFiles.length > 0 ? filteredFiles : files;
             const mediaFiles = allFiles.filter(f => {
@@ -755,6 +797,8 @@ const FileList = ({
                     }
                   }}
                   sx={{
+                    width: 32,
+                    height: 32,
                     backgroundColor: '#f3f4f6',
                     '&:hover': { backgroundColor: '#e5e7eb' },
                   }}
@@ -771,24 +815,36 @@ const FileList = ({
             size="small"
             sx={{
               backgroundColor: '#f3f4f6',
+              borderRadius: 2,
               '& .MuiToggleButton-root': {
                 border: 'none',
-                px: 1.5,
+                px: 1,
+                minWidth: 32,
+                height: 32,
+                borderRadius: 2,
                 '&.Mui-selected': {
                   backgroundColor: 'primary.main',
                   color: 'white',
                   '&:hover': {
                     backgroundColor: 'primary.dark',
                   },
+                  '& svg': {
+                    color: 'white',
+                  },
+                },
+                '&:not(.Mui-selected)': {
+                  '&:hover': {
+                    backgroundColor: '#e5e7eb',
+                  },
                 },
               },
             }}
           >
             <ToggleButton value="list">
-              <ViewListIcon fontSize="small" />
+              <ViewListIcon sx={{ fontSize: 18 }} />
             </ToggleButton>
             <ToggleButton value="grid">
-              <GridViewIcon fontSize="small" />
+              <GridViewIcon sx={{ fontSize: 18 }} />
             </ToggleButton>
           </ToggleButtonGroup>
         </Box>
@@ -905,6 +961,7 @@ const FileList = ({
                             justifyContent: 'center',
                             backgroundColor: isImage(file.file_name) || isVideo(file.file_name) ? 'transparent' : '#f3f4f6',
                             overflow: 'hidden',
+                            position: 'relative',
                           }}
                         >
                           {(isImage(file.file_name) || isVideo(file.file_name)) ? (
@@ -931,9 +988,11 @@ const FileList = ({
                           <Typography
                             variant="body1"
                             sx={{
-                              fontWeight: 600,
-                              fontSize: { xs: '0.95rem', sm: '1rem' },
+                              fontWeight: 500,
+                              fontSize: { xs: '0.938rem', sm: '1rem' },
                               mb: 0.25,
+                              color: '#1e293b',
+                              flex: 1,
                             }}
                             noWrap
                           >
@@ -941,45 +1000,49 @@ const FileList = ({
                           </Typography>
                         }
                         secondary={
-                          <Box sx={{ display: 'flex', gap: 1, alignItems: 'center', mt: 0.5 }}>
-                            <Typography variant="caption" color="text.secondary">
+                          <Box sx={{ display: 'flex', gap: 0.5, alignItems: 'center', mt: 0.25 }}>
+                            <Typography variant="caption" sx={{ color: '#64748b', fontSize: '0.75rem' }}>
                               {formatFileSize(file.metadata?.size)}
                             </Typography>
-                            <Typography variant="caption" color="text.secondary" sx={{ mx: 0.5 }}>
+                            <Typography variant="caption" sx={{ color: '#cbd5e1', mx: 0.25 }}>
                               •
                             </Typography>
-                            <Typography variant="caption" color="text.secondary">
+                            <Typography variant="caption" sx={{ color: '#64748b', fontSize: '0.75rem' }}>
                               {formatDate(file.last_modified)}
                             </Typography>
-                            <Box sx={{ ml: 1 }}>
-                              <Tooltip title={getTierLabel(file.metadata?.tier)} arrow>
-                                <Box
-                                  sx={{
-                                    display: 'inline-flex',
-                                    alignItems: 'center',
-                                    justifyContent: 'center',
-                                    width: 20,
-                                    height: 20,
-                                    borderRadius: '50%',
-                                    backgroundColor: file.metadata?.tier === 'glacier' ? 'info.light' : 'grey.200',
-                                    color: file.metadata?.tier === 'glacier' ? 'info.main' : 'grey.700',
-                                  }}
-                                >
-                                  {getTierIcon(file.metadata?.tier)}
-                                </Box>
-                              </Tooltip>
-                            </Box>
                           </Box>
                         }
                       />
                       <ListItemSecondaryAction>
-                        <IconButton
-                          edge="end"
-                          onClick={(e) => handleClick(e, file)}
-                          size="small"
-                        >
-                          <MoreVertIcon />
-                        </IconButton>
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                          <Tooltip title={getTierLabel(file.metadata?.tier)} arrow>
+                            <Box
+                              sx={{
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                width: 20,
+                                height: 20,
+                                borderRadius: '50%',
+                                backgroundColor: file.metadata?.tier === 'glacier' ? 'info.light' : 'grey.200',
+                                color: file.metadata?.tier === 'glacier' ? 'info.main' : 'grey.700',
+                              }}
+                            >
+                              {getTierIcon(file.metadata?.tier)}
+                            </Box>
+                          </Tooltip>
+                          <IconButton
+                            edge="end"
+                            onClick={(e) => handleClick(e, file)}
+                            size="small"
+                            sx={{
+                              width: 32,
+                              height: 32,
+                            }}
+                          >
+                            <MoreVertIcon fontSize="small" />
+                          </IconButton>
+                        </Box>
                       </ListItemSecondaryAction>
                       {(updatingFileId === file.id || updatingFileId === file.s3_key) && (
                         <Box
