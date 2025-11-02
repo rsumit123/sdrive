@@ -67,6 +67,8 @@ const FileList = ({
   handleFileAction,
   tier,
   totalSpaceUsed,
+  accountUsage,
+  onFilesChanged,
 }) => {
   // State for pagination and data
   const [files, setFiles] = useState(initialFiles || []);
@@ -135,6 +137,11 @@ const FileList = ({
       setFiles(response.data.files);
       setTotalPages(receivedTotalPages);
       setTotalFiles(receivedTotalFiles);
+      
+      // Refresh account usage when files are fetched
+      if (onFilesChanged) {
+        onFilesChanged();
+      }
       
     } catch (err) {
       console.error('Error fetching files:', err);
@@ -282,14 +289,6 @@ const FileList = ({
     return (bytes / (1024 * 1024 * 1024)).toFixed(2) + ' GB';
   };
 
-  // Calculate total space used from all files
-  const calculateTotalSpaceUsed = () => {
-    const totalBytes = files.reduce((sum, file) => {
-      const fileSize = file.metadata?.size || 0;
-      return sum + fileSize;
-    }, 0);
-    return totalBytes;
-  };
 
   // Format date to user-friendly format (shortened for mobile)
   const formatDate = (isoString) => {
@@ -599,6 +598,9 @@ const FileList = ({
   // Calculate storage percentage (assuming 2GB limit, can be made configurable)
   const storageLimit = 2 * 1024 * 1024 * 1024; // 2GB in bytes
   const storagePercentage = totalSpaceUsed ? Math.min((totalSpaceUsed / storageLimit) * 100, 100) : 0;
+  
+  // Use account usage from API if available, otherwise fallback to props
+  const displayTotalFiles = accountUsage?.total_files ?? totalFiles;
 
   return (
     <Box>
@@ -652,7 +654,7 @@ const FileList = ({
                 Total Files
               </Typography>
               <Typography variant="h6" sx={{ fontWeight: 700, fontSize: '1.25rem', mt: 0.25, color: '#1e293b' }}>
-                {totalFiles}
+                {displayTotalFiles}
               </Typography>
             </Paper>
             <Paper

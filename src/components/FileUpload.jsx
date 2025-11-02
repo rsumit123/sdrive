@@ -48,6 +48,10 @@ const FileUpload = ({ setShowCmdUpload }) => {
   const [renameLoading, setRenameLoading] = useState(false);
   const [renameError, setRenameError] = useState('');
 
+  // Account usage state
+  const [accountUsage, setAccountUsage] = useState(null);
+  const [usageLoading, setUsageLoading] = useState(false);
+
   const { logout, user } = useAuth();
   const [settingsMenuOpen, setSettingsMenuOpen] = useState(false);
   const [settingsAnchorEl, setSettingsAnchorEl] = useState(null);
@@ -55,7 +59,24 @@ const FileUpload = ({ setShowCmdUpload }) => {
 
   useEffect(() => {
     fetchUploadedFiles();
+    fetchAccountUsage();
   }, []);
+
+  // Fetch account usage from API
+  const fetchAccountUsage = async () => {
+    setUsageLoading(true);
+    try {
+      const response = await axios.get(
+        `${import.meta.env.VITE_BACKEND_URL}/api/account/check_account_usage/`
+      );
+      setAccountUsage(response.data);
+    } catch (err) {
+      console.error('Error fetching account usage:', err);
+      // Don't show error to user, just log it
+    } finally {
+      setUsageLoading(false);
+    }
+  };
 
   const handleFileChange = (event) => {
     const files = Array.from(event.target.files);
@@ -266,6 +287,9 @@ const FileUpload = ({ setShowCmdUpload }) => {
         console.error('Response data.files is not an array:', response.data);
         setError('Unexpected response format from the server.');
       }
+      
+      // Refresh account usage when files are fetched
+      fetchAccountUsage();
     } catch (err) {
       console.error('Error fetching files:', err);
       setError(err.response?.data?.error || 'Could not fetch data. Please contact admin.');
@@ -323,6 +347,7 @@ const FileUpload = ({ setShowCmdUpload }) => {
         if (response.status === 200) {
           alert('File deleted successfully.');
           fetchUploadedFiles();
+          fetchAccountUsage(); // Refresh usage after delete
         } else {
           alert(`Unexpected response status: ${response.status}`);
         }
@@ -386,6 +411,7 @@ const FileUpload = ({ setShowCmdUpload }) => {
 
       if (response.status === 200) {
         fetchUploadedFiles();
+        fetchAccountUsage(); // Refresh usage after rename
         setRenameDialogOpen(false);
       } else {
         setRenameError('Unexpected response from the server.');
@@ -536,13 +562,6 @@ const FileUpload = ({ setShowCmdUpload }) => {
     setSelectedFileForMenu(null);}
   };
 
-  // Calculate total space used for header display
-  const calculateTotalSpaceUsed = () => {
-    return uploadedFiles.reduce((sum, file) => {
-      return sum + (file.metadata?.size || 0);
-    }, 0);
-  };
-
   const formatFileSize = (bytes) => {
     if (!bytes && bytes !== 0) return '0 MB';
     if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(2) + ' KB';
@@ -560,7 +579,8 @@ const FileUpload = ({ setShowCmdUpload }) => {
     setSettingsMenuOpen(false);
   };
 
-  const totalSpaceUsed = calculateTotalSpaceUsed();
+  // Get total space used from API or fallback to 0
+  const totalSpaceUsed = accountUsage?.total_file_size || 0;
 
   return (
     <Box
@@ -707,6 +727,8 @@ const FileUpload = ({ setShowCmdUpload }) => {
           handleFileAction={handleFileAction}
           tier={tier}
           totalSpaceUsed={totalSpaceUsed}
+          accountUsage={accountUsage}
+          onFilesChanged={fetchAccountUsage}
         />
 
         {uploadErrors.length > 0 && (
