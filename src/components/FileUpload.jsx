@@ -1,41 +1,26 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
-import axiosS3 from '../axioS3'; // Import the S3 axios instance
+import axiosS3 from '../axioS3';
 import { useAuth } from '../contexts/AuthContext';
-import MoreVertIcon from '@mui/icons-material/MoreVert';
-import DownloadIcon from '@mui/icons-material/Download';
-import DeleteIcon from '@mui/icons-material/Delete';
-import EditIcon from '@mui/icons-material/Edit' ;
-import UploadFileIcon from '@mui/icons-material/UploadFile';
-import CloudUploadIcon from '@mui/icons-material/CloudUpload';
 import {
-  Container,
-  Grid,
-  Typography,
-  Button,
-  FormControl,
-  InputLabel,
-  Select,
-  MenuItem,
-  CircularProgress,
-  LinearProgress,
-  IconButton,
-  Link,
-  Menu as MUIMenu,
-  MenuItem as MUIMenuItem,
-  Tooltip,
-  TextField,
-  Alert,
   Box,
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogActions,
-  Chip,
-  Stack,
-  Paper,
+  Typography,
+  IconButton,
+  Menu as MUIMenu,
+  MenuItem,
+  ListItemText,
+  Divider,
+  Fab,
+  LinearProgress,
+  Alert,
+  SwipeableDrawer,
 } from '@mui/material';
-import { DataGrid } from '@mui/x-data-grid';
+import LogoutIcon from '@mui/icons-material/Logout';
+import SettingsIcon from '@mui/icons-material/Settings';
+import MoreVertIcon from '@mui/icons-material/MoreVert';
+import UploadIcon from '@mui/icons-material/Upload';
+import TerminalIcon from '@mui/icons-material/Terminal';
+import StorageIcon from '@mui/icons-material/Storage';
 
 // Import the new components
 import FileSelector from './FileSelector';
@@ -63,7 +48,10 @@ const FileUpload = ({ setShowCmdUpload }) => {
   const [renameLoading, setRenameLoading] = useState(false);
   const [renameError, setRenameError] = useState('');
 
-  const { logout } = useAuth();
+  const { logout, user } = useAuth();
+  const [settingsMenuOpen, setSettingsMenuOpen] = useState(false);
+  const [settingsAnchorEl, setSettingsAnchorEl] = useState(null);
+  const [uploadSheetOpen, setUploadSheetOpen] = useState(false);
 
   useEffect(() => {
     fetchUploadedFiles();
@@ -548,65 +536,277 @@ const FileUpload = ({ setShowCmdUpload }) => {
     setSelectedFileForMenu(null);}
   };
 
+  // Calculate total space used for header display
+  const calculateTotalSpaceUsed = () => {
+    return uploadedFiles.reduce((sum, file) => {
+      return sum + (file.metadata?.size || 0);
+    }, 0);
+  };
+
+  const formatFileSize = (bytes) => {
+    if (!bytes && bytes !== 0) return '0 MB';
+    if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(2) + ' KB';
+    if (bytes < 1024 * 1024 * 1024) return (bytes / (1024 * 1024)).toFixed(2) + ' MB';
+    return (bytes / (1024 * 1024 * 1024)).toFixed(2) + ' GB';
+  };
+
+  const handleSettingsClick = (event) => {
+    setSettingsAnchorEl(event.currentTarget);
+    setSettingsMenuOpen(true);
+  };
+
+  const handleSettingsClose = () => {
+    setSettingsAnchorEl(null);
+    setSettingsMenuOpen(false);
+  };
+
+  const totalSpaceUsed = calculateTotalSpaceUsed();
+
   return (
-    <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
-      <Grid container alignItems="center" justifyContent="space-between" spacing={2}>
-        <Grid item xs={6} sm={6}>
-          <Typography variant="h4" gutterBottom>
-            SDrive
+    <Box
+      sx={{
+        minHeight: '100vh',
+        backgroundColor: '#f3f4f6',
+        pb: { xs: 10, sm: 4 },
+      }}
+    >
+      {/* Modern App Header */}
+      <Box
+        sx={{
+          backgroundColor: 'white',
+          borderBottom: '1px solid',
+          borderColor: 'divider',
+          position: 'sticky',
+          top: 0,
+          zIndex: 100,
+          px: { xs: 2, sm: 4 },
+          py: { xs: 1.5, sm: 2 },
+        }}
+      >
+        <Box
+          sx={{
+            maxWidth: { xs: '100%', sm: '1200px' },
+            mx: 'auto',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+          }}
+        >
+          <Box>
+            <Typography
+              variant="h5"
+              sx={{
+                fontWeight: 700,
+                fontSize: { xs: '1.25rem', sm: '1.5rem' },
+                mb: 0.25,
+                color: '#1f2937',
+              }}
+            >
+              SDrive
+            </Typography>
+            <Typography
+              variant="caption"
+              sx={{
+                color: 'text.secondary',
+                fontSize: { xs: '0.75rem', sm: '0.875rem' },
+              }}
+            >
+              {formatFileSize(totalSpaceUsed)} used
+            </Typography>
+          </Box>
+          <IconButton
+            onClick={handleSettingsClick}
+            sx={{
+              backgroundColor: '#f3f4f6',
+              '&:hover': {
+                backgroundColor: '#e5e7eb',
+              },
+            }}
+          >
+            <MoreVertIcon />
+          </IconButton>
+        </Box>
+      </Box>
+
+      {/* Settings Menu */}
+      <MUIMenu
+        anchorEl={settingsAnchorEl}
+        open={settingsMenuOpen}
+        onClose={handleSettingsClose}
+        transformOrigin={{ horizontal: 'right', vertical: 'top' }}
+        anchorOrigin={{ horizontal: 'right', vertical: 'bottom' }}
+      >
+        <MenuItem onClick={() => { setShowCmdUpload(true); handleSettingsClose(); }}>
+          <TerminalIcon sx={{ mr: 2, fontSize: 20 }} />
+          <ListItemText primary="Upload via CMD" secondary="Advanced upload method" />
+        </MenuItem>
+        <Divider />
+        <Box sx={{ px: 2, py: 1 }}>
+          <Typography variant="caption" color="text.secondary" sx={{ textTransform: 'uppercase', letterSpacing: 1, fontSize: '0.7rem' }}>
+            Storage Tier
           </Typography>
-        </Grid>
-        <Grid item xs={6} sm={6} container justifyContent="flex-end">
-          <Button color="primary" variant="contained" onClick={logout}>
-            Logout
-          </Button>
-        </Grid>
-      </Grid>
-      
-      <FormControl fullWidth margin="normal">
-        <InputLabel>Storage Tier</InputLabel>
-        <Select value={tier} onChange={(e) => setTier(e.target.value)}>
-          <MenuItem value="standard">Standard</MenuItem>
-          <MenuItem value="glacier">Archive</MenuItem>
-        </Select>
-      </FormControl>
+          <Box sx={{ mt: 1 }}>
+            <Box
+              onClick={() => { setTier('standard'); handleSettingsClose(); }}
+              sx={{
+                p: 1,
+                borderRadius: 1,
+                backgroundColor: tier === 'standard' ? 'primary.light' : 'transparent',
+                cursor: 'pointer',
+                mb: 0.5,
+              }}
+            >
+              <Typography variant="body2">Standard</Typography>
+            </Box>
+            <Box
+              onClick={() => { setTier('glacier'); handleSettingsClose(); }}
+              sx={{
+                p: 1,
+                borderRadius: 1,
+                backgroundColor: tier === 'glacier' ? 'primary.light' : 'transparent',
+                cursor: 'pointer',
+              }}
+            >
+              <Typography variant="body2">Archive</Typography>
+            </Box>
+          </Box>
+        </Box>
+        <Divider />
+        <MenuItem
+          onClick={() => {
+            logout();
+            handleSettingsClose();
+          }}
+        >
+          <LogoutIcon sx={{ mr: 2, fontSize: 20 }} />
+          <ListItemText primary="Logout" />
+        </MenuItem>
+      </MUIMenu>
 
-      <FileSelector
-        selectedFiles={selectedFiles}
-        setSelectedFiles={setSelectedFiles}
-        fileProgress={fileProgress}
-        setFileProgress={setFileProgress}
-        uploading={uploading}
-        setUploading={setUploading}
-        overallProgress={overallProgress}
-        setOverallProgress={setOverallProgress}
-        tier={tier}
-        uploadErrors={uploadErrors}
-        setUploadErrors={setUploadErrors}
-        setError={setError}
-        fetchUploadedFiles={fetchUploadedFiles}
-        setShowCmdUpload={setShowCmdUpload}
-      />
-      
-      {uploadErrors.length > 0 && (
-        <Alert severity="error" sx={{ mt: 2 }}>
-          <Typography variant="subtitle2">Some files failed to upload:</Typography>
-          <ul style={{ margin: '8px 0', paddingLeft: '20px' }}>
-            {uploadErrors.map((err, index) => (
-              <li key={index}>{err}</li>
-            ))}
-          </ul>
-        </Alert>
+      {/* Main Content */}
+      <Box
+        sx={{
+          maxWidth: { xs: '100%', sm: '1200px' },
+          mx: 'auto',
+          px: { xs: 2, sm: 4 },
+          pt: { xs: 2, sm: 3 },
+        }}
+      >
+        {/* Upload Sheet Content (Hidden FileSelector) */}
+        <FileList
+          uploadedFiles={uploadedFiles}
+          loading={loading}
+          error={error}
+          searchText={searchText}
+          setSearchText={setSearchText}
+          handleFileAction={handleFileAction}
+          tier={tier}
+          totalSpaceUsed={totalSpaceUsed}
+        />
+
+        {uploadErrors.length > 0 && (
+          <Alert severity="error" sx={{ mt: 2, mb: 2, borderRadius: 2 }}>
+            <Typography variant="subtitle2">Some files failed to upload:</Typography>
+            <ul style={{ margin: '8px 0', paddingLeft: '20px' }}>
+              {uploadErrors.map((err, index) => (
+                <li key={index}>{err}</li>
+              ))}
+            </ul>
+          </Alert>
+        )}
+      </Box>
+
+      {/* Upload Bottom Sheet / Drawer */}
+      <SwipeableDrawer
+        anchor="bottom"
+        open={uploadSheetOpen}
+        onClose={() => setUploadSheetOpen(false)}
+        onOpen={() => setUploadSheetOpen(true)}
+        PaperProps={{
+          sx: {
+            borderTopLeftRadius: 20,
+            borderTopRightRadius: 20,
+            maxHeight: '90vh',
+          },
+        }}
+      >
+        <Box sx={{ p: 3 }}>
+          <Box
+            sx={{
+              width: 40,
+              height: 4,
+              backgroundColor: '#d1d5db',
+              borderRadius: 2,
+              mx: 'auto',
+              mb: 3,
+            }}
+          />
+          <Typography variant="h6" sx={{ mb: 3, fontWeight: 600 }}>
+            Upload Files
+          </Typography>
+          <FileSelector
+            selectedFiles={selectedFiles}
+            setSelectedFiles={setSelectedFiles}
+            fileProgress={fileProgress}
+            setFileProgress={setFileProgress}
+            uploading={uploading}
+            setUploading={setUploading}
+            overallProgress={overallProgress}
+            setOverallProgress={setOverallProgress}
+            tier={tier}
+            uploadErrors={uploadErrors}
+            setUploadErrors={setUploadErrors}
+            setError={setError}
+            fetchUploadedFiles={fetchUploadedFiles}
+            setShowCmdUpload={setShowCmdUpload}
+            onUploadComplete={() => setUploadSheetOpen(false)}
+          />
+        </Box>
+      </SwipeableDrawer>
+
+      {/* Floating Action Button */}
+      <Fab
+        color="primary"
+        aria-label="upload"
+        onClick={() => setUploadSheetOpen(true)}
+        sx={{
+          position: 'fixed',
+          bottom: { xs: 80, sm: 24 },
+          right: { xs: 16, sm: 24 },
+          width: { xs: 56, sm: 64 },
+          height: { xs: 56, sm: 64 },
+          boxShadow: '0 8px 16px rgba(0,0,0,0.15)',
+          '&:hover': {
+            boxShadow: '0 12px 24px rgba(0,0,0,0.2)',
+          },
+        }}
+      >
+        <UploadIcon sx={{ fontSize: { xs: 28, sm: 32 } }} />
+      </Fab>
+
+      {/* Upload Progress Indicator */}
+      {uploading && (
+        <Box
+          sx={{
+            position: 'fixed',
+            bottom: { xs: 0, sm: 0 },
+            left: 0,
+            right: 0,
+            backgroundColor: 'white',
+            borderTop: '1px solid',
+            borderColor: 'divider',
+            p: 2,
+            zIndex: 1000,
+          }}
+        >
+          <Box sx={{ maxWidth: 1200, mx: 'auto' }}>
+            <Typography variant="body2" sx={{ mb: 1, fontWeight: 500 }}>
+              Uploading... {overallProgress}%
+            </Typography>
+            <LinearProgress variant="determinate" value={overallProgress} sx={{ borderRadius: 1, height: 6 }} />
+          </Box>
+        </Box>
       )}
-
-      <FileList
-        uploadedFiles={uploadedFiles}
-        loading={loading}
-        error={error}
-        searchText={searchText}
-        setSearchText={setSearchText}
-        handleFileAction={handleFileAction}
-      />
 
       <RenameDialog
         open={renameDialogOpen}
@@ -618,7 +818,7 @@ const FileUpload = ({ setShowCmdUpload }) => {
         error={renameError}
         onSubmit={submitRename}
       />
-    </Container>
+    </Box>
   );
 };
 

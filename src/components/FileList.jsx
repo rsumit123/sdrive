@@ -7,7 +7,6 @@ import {
   Alert,
   Box,
   IconButton,
-  Link,
   Tooltip,
   Menu as MUIMenu,
   MenuItem as MUIMenuItem,
@@ -18,7 +17,6 @@ import {
   Divider,
   Pagination,
   CardMedia,
-  CardActionArea,
   Dialog,
   DialogTitle,
   DialogContent,
@@ -26,6 +24,15 @@ import {
   DialogActions,
   Snackbar,
   Paper,
+  InputAdornment,
+  LinearProgress,
+  ToggleButton,
+  ToggleButtonGroup,
+  List,
+  ListItem,
+  ListItemAvatar,
+  ListItemText,
+  ListItemSecondaryAction,
 } from '@mui/material';
 import MoreVertIcon from '@mui/icons-material/MoreVert';
 import DownloadIcon from '@mui/icons-material/Download';
@@ -44,6 +51,10 @@ import UnarchiveIcon from '@mui/icons-material/Unarchive';
 import ContentCopyIcon from '@mui/icons-material/ContentCopy';
 import ViewModuleIcon from '@mui/icons-material/ViewModule';
 import ViewStreamIcon from '@mui/icons-material/ViewStream';
+import ViewListIcon from '@mui/icons-material/ViewList';
+import GridViewIcon from '@mui/icons-material/GridView';
+import FolderOpenIcon from '@mui/icons-material/FolderOpen';
+import SearchIcon from '@mui/icons-material/Search';
 import axios from 'axios';
 import MediaScrollView from './MediaScrollView';
 
@@ -54,6 +65,8 @@ const FileList = ({
   searchText,
   setSearchText,
   handleFileAction,
+  tier,
+  totalSpaceUsed,
 }) => {
   // State for pagination and data
   const [files, setFiles] = useState(initialFiles || []);
@@ -65,6 +78,12 @@ const FileList = ({
   const [refreshing, setRefreshing] = useState(false);
   const [updatingFileId, setUpdatingFileId] = useState(null);
   const [itemsPerPage] = useState(10);
+  
+  // View mode: 'list' or 'grid'
+  const [viewMode, setViewMode] = useState('list');
+  
+  // Filter state: 'all', 'images', 'videos', 'docs'
+  const [filter, setFilter] = useState('all');
 
   // State for file actions menu
   const [anchorEl, setAnchorEl] = useState(null);
@@ -444,10 +463,17 @@ const FileList = ({
     }
   }, [window.fileRenamed]);
 
-  // Filter files based on search text
-  const filteredFiles = files.filter((file) =>
-    file.file_name.toLowerCase().includes(searchText.toLowerCase())
-  );
+  // Filter files based on search text and type filter
+  const filteredFiles = files.filter((file) => {
+    const matchesSearch = file.file_name.toLowerCase().includes(searchText.toLowerCase());
+    if (!matchesSearch) return false;
+    
+    if (filter === 'all') return true;
+    if (filter === 'images') return isImage(file.file_name);
+    if (filter === 'videos') return isVideo(file.file_name);
+    if (filter === 'docs') return isPDF(file.file_name) || !isImage(file.file_name) && !isVideo(file.file_name);
+    return true;
+  });
 
   // Get storage tier icon
   const getTierIcon = (tier) => {
@@ -554,151 +580,215 @@ const FileList = ({
     }
   };
 
+  // Calculate storage percentage (assuming 2GB limit, can be made configurable)
+  const storageLimit = 2 * 1024 * 1024 * 1024; // 2GB in bytes
+  const storagePercentage = totalSpaceUsed ? Math.min((totalSpaceUsed / storageLimit) * 100, 100) : 0;
+
   return (
-    <Box sx={{ mt: { xs: 2, sm: 4 } }}>
-      <Grid container spacing={2} alignItems="center" sx={{ mb: 2 }}>
-        <Grid item xs={12} sm={8}>
-          <TextField
-            label="Search Files"
-            variant="outlined"
-            fullWidth
-            value={searchText}
-            onChange={(e) => setSearchText(e.target.value)}
+    <Box>
+      {/* Storage Progress Bar */}
+      {totalSpaceUsed !== undefined && (
+        <Paper
+          elevation={0}
+          sx={{
+            p: { xs: 2, sm: 3 },
+            mb: 3,
+            borderRadius: 3,
+            backgroundColor: 'white',
+            border: '1px solid',
+            borderColor: 'divider',
+          }}
+        >
+          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
+            <Typography variant="body2" sx={{ fontWeight: 600, color: '#1f2937' }}>
+              {formatFileSize(totalSpaceUsed)} of {formatFileSize(storageLimit)} used
+            </Typography>
+            <Button size="small" variant="text" sx={{ textTransform: 'none', fontSize: '0.75rem' }}>
+              Upgrade
+            </Button>
+          </Box>
+          <LinearProgress
+            variant="determinate"
+            value={storagePercentage}
             sx={{
-              '& .MuiOutlinedInput-root': {
-                borderRadius: 2,
+              height: 8,
+              borderRadius: 4,
+              backgroundColor: '#e5e7eb',
+              '& .MuiLinearProgress-bar': {
+                borderRadius: 4,
               },
             }}
           />
-        </Grid>
-        <Grid item xs={12} sm={4}>
-          <Button 
-            variant="outlined" 
-            startIcon={refreshing ? <CircularProgress size={20} /> : <RefreshIcon />} 
-            onClick={refreshFiles}
-            disabled={refreshing}
-            fullWidth
-            sx={{ 
-              borderRadius: 2,
-              py: 1.5,
-              fontWeight: 500,
-            }}
-          >
-            {refreshing ? 'Refreshing...' : 'Refresh'}
-          </Button>
-        </Grid>
-      </Grid>
-
-      {/* Stats Section */}
-      {files.length > 0 && (
-        <Grid container spacing={2} sx={{ mb: 3 }}>
-          <Grid item xs={12} sm={4}>
+          <Box sx={{ display: 'flex', gap: 2, mt: 2 }}>
             <Paper
-              elevation={2}
+              elevation={0}
               sx={{
-                p: 2,
+                px: 2,
+                py: 1,
                 borderRadius: 2,
+                backgroundColor: '#f3f4f6',
+                flex: 1,
                 textAlign: 'center',
-                background: 'linear-gradient(135deg, #667eea15 0%, #764ba215 100%)',
-                border: '1px solid',
-                borderColor: 'divider',
               }}
             >
-              <Typography variant="body2" color="text.secondary" sx={{ mb: 0.5 }}>
-                Total Space Used
-              </Typography>
-              <Typography variant="h6" color="primary" sx={{ fontWeight: 700 }}>
-                {formatFileSize(calculateTotalSpaceUsed())}
-              </Typography>
-            </Paper>
-          </Grid>
-          <Grid item xs={6} sm={4}>
-            <Paper
-              elevation={2}
-              sx={{
-                p: 2,
-                borderRadius: 2,
-                textAlign: 'center',
-                background: 'linear-gradient(135deg, #667eea15 0%, #764ba215 100%)',
-                border: '1px solid',
-                borderColor: 'divider',
-              }}
-            >
-              <Typography variant="body2" color="text.secondary" sx={{ mb: 0.5 }}>
+              <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.7rem', textTransform: 'uppercase', letterSpacing: 0.5 }}>
                 Total Files
               </Typography>
-              <Typography variant="h6" color="primary" sx={{ fontWeight: 700 }}>
+              <Typography variant="h6" sx={{ fontWeight: 700, fontSize: '1.25rem', mt: 0.25 }}>
                 {totalFiles}
               </Typography>
             </Paper>
-          </Grid>
-          <Grid item xs={6} sm={4}>
             <Paper
-              elevation={2}
+              elevation={0}
               sx={{
-                p: 2,
+                px: 2,
+                py: 1,
                 borderRadius: 2,
+                backgroundColor: '#f3f4f6',
+                flex: 1,
                 textAlign: 'center',
-                background: 'linear-gradient(135deg, #667eea15 0%, #764ba215 100%)',
-                border: '1px solid',
-                borderColor: 'divider',
               }}
             >
-              <Typography variant="body2" color="text.secondary" sx={{ mb: 0.5 }}>
-                Files in View
+              <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.7rem', textTransform: 'uppercase', letterSpacing: 0.5 }}>
+                In View
               </Typography>
-              <Typography variant="h6" color="primary" sx={{ fontWeight: 700 }}>
+              <Typography variant="h6" sx={{ fontWeight: 700, fontSize: '1.25rem', mt: 0.25 }}>
                 {filteredFiles.length}
               </Typography>
             </Paper>
-          </Grid>
-        </Grid>
+          </Box>
+        </Paper>
       )}
 
+      {/* Modern Search Bar */}
+      <Box sx={{ mb: 2 }}>
+        <TextField
+          placeholder="Search files..."
+          variant="outlined"
+          fullWidth
+          value={searchText}
+          onChange={(e) => setSearchText(e.target.value)}
+          InputProps={{
+            startAdornment: (
+              <InputAdornment position="start">
+                <SearchIcon sx={{ color: 'text.secondary' }} />
+              </InputAdornment>
+            ),
+            endAdornment: (
+              <InputAdornment position="end">
+                <IconButton
+                  size="small"
+                  onClick={refreshFiles}
+                  disabled={refreshing}
+                  sx={{
+                    mr: -1,
+                  }}
+                >
+                  {refreshing ? <CircularProgress size={20} /> : <RefreshIcon />}
+                </IconButton>
+              </InputAdornment>
+            ),
+          }}
+          sx={{
+            '& .MuiOutlinedInput-root': {
+              borderRadius: 3,
+              backgroundColor: '#f9fafb',
+              '& fieldset': {
+                borderColor: '#e5e7eb',
+              },
+              '&:hover fieldset': {
+                borderColor: '#d1d5db',
+              },
+              '&.Mui-focused fieldset': {
+                borderColor: 'primary.main',
+              },
+            },
+          }}
+        />
+      </Box>
+
+      {/* Filter Chips */}
+      <Box sx={{ display: 'flex', gap: 1, mb: 3, flexWrap: 'wrap' }}>
+        {['all', 'images', 'videos', 'docs'].map((filterType) => (
+          <Chip
+            key={filterType}
+            label={filterType.charAt(0).toUpperCase() + filterType.slice(1)}
+            onClick={() => setFilter(filterType)}
+            size="small"
+            sx={{
+              backgroundColor: filter === filterType ? 'primary.main' : '#f3f4f6',
+              color: filter === filterType ? 'white' : '#6b7280',
+              fontWeight: filter === filterType ? 600 : 500,
+              '&:hover': {
+                backgroundColor: filter === filterType ? 'primary.dark' : '#e5e7eb',
+              },
+            }}
+          />
+        ))}
+      </Box>
+
+      {/* File List Header */}
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
-        <Typography variant="h6" gutterBottom>
-          Uploaded Files
+        <Typography variant="h6" sx={{ fontWeight: 600, fontSize: { xs: '1rem', sm: '1.25rem' } }}>
+          Uploaded Files ({filteredFiles.length})
         </Typography>
-        {(() => {
-          // Check both files and filteredFiles for media
-          const allFiles = filteredFiles.length > 0 ? filteredFiles : files;
-          const mediaFiles = allFiles.filter(f => {
-            if (!f || !f.file_name) return false;
-            return isImage(f.file_name) || isVideo(f.file_name);
-          });
-          
-          console.log('Media files check:', {
-            totalFiles: files.length,
-            filteredFiles: filteredFiles.length,
-            mediaFilesCount: mediaFiles.length,
-            sampleFileNames: files.slice(0, 3).map(f => f?.file_name)
-          });
-          
-          return mediaFiles.length > 0 ? (
-            <Tooltip title={`Open Scrollable Media View (${mediaFiles.length} ${mediaFiles.length === 1 ? 'file' : 'files'})`}>
-              <Button
-                variant="contained"
-                color="primary"
-                startIcon={<ViewStreamIcon />}
-                onClick={() => {
-                  const allMediaFiles = files.filter(f => isImage(f.file_name) || isVideo(f.file_name));
-                  if (allMediaFiles.length > 0) {
-                    setSelectedMediaIndex(0);
-                    setScrollableViewOpen(true);
-                  }
-                }}
-                sx={{
-                  borderRadius: 2,
-                  textTransform: 'none',
-                  fontWeight: 500,
-                  boxShadow: 2,
-                }}
-              >
-                Media View ({mediaFiles.length})
-              </Button>
-            </Tooltip>
-          ) : null;
-        })()}
+        <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
+          {(() => {
+            const allFiles = filteredFiles.length > 0 ? filteredFiles : files;
+            const mediaFiles = allFiles.filter(f => {
+              if (!f || !f.file_name) return false;
+              return isImage(f.file_name) || isVideo(f.file_name);
+            });
+            
+            return mediaFiles.length > 0 ? (
+              <Tooltip title={`Open Scrollable Media View (${mediaFiles.length} ${mediaFiles.length === 1 ? 'file' : 'files'})`}>
+                <IconButton
+                  size="small"
+                  onClick={() => {
+                    const allMediaFiles = files.filter(f => isImage(f.file_name) || isVideo(f.file_name));
+                    if (allMediaFiles.length > 0) {
+                      setSelectedMediaIndex(0);
+                      setScrollableViewOpen(true);
+                    }
+                  }}
+                  sx={{
+                    backgroundColor: '#f3f4f6',
+                    '&:hover': { backgroundColor: '#e5e7eb' },
+                  }}
+                >
+                  <ViewStreamIcon fontSize="small" />
+                </IconButton>
+              </Tooltip>
+            ) : null;
+          })()}
+          <ToggleButtonGroup
+            value={viewMode}
+            exclusive
+            onChange={(e, newMode) => newMode && setViewMode(newMode)}
+            size="small"
+            sx={{
+              backgroundColor: '#f3f4f6',
+              '& .MuiToggleButton-root': {
+                border: 'none',
+                px: 1.5,
+                '&.Mui-selected': {
+                  backgroundColor: 'primary.main',
+                  color: 'white',
+                  '&:hover': {
+                    backgroundColor: 'primary.dark',
+                  },
+                },
+              },
+            }}
+          >
+            <ToggleButton value="list">
+              <ViewListIcon fontSize="small" />
+            </ToggleButton>
+            <ToggleButton value="grid">
+              <GridViewIcon fontSize="small" />
+            </ToggleButton>
+          </ToggleButtonGroup>
+        </Box>
       </Box>
 
       {error && (
@@ -756,16 +846,166 @@ const FileList = ({
           )}
 
           {filteredFiles.length === 0 ? (
-            <Typography variant="body1" sx={{ mt: 2 }}>
-              {files.length === 0 ? 'No files uploaded yet.' : 'No files match your search.'}
-            </Typography>
+            <Box
+              sx={{
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                justifyContent: 'center',
+                py: 8,
+                textAlign: 'center',
+              }}
+            >
+              <FolderOpenIcon sx={{ fontSize: 64, color: 'text.secondary', mb: 2, opacity: 0.5 }} />
+              <Typography variant="h6" sx={{ mb: 1, fontWeight: 600 }}>
+                {files.length === 0 ? 'No files uploaded yet' : 'No files match your search'}
+              </Typography>
+              <Typography variant="body2" color="text.secondary">
+                {files.length === 0 ? 'Upload your first file to get started' : 'Try adjusting your search or filters'}
+              </Typography>
+            </Box>
+          ) : viewMode === 'list' ? (
+            // Modern List View
+            <Paper
+              elevation={0}
+              sx={{
+                borderRadius: 3,
+                border: '1px solid',
+                borderColor: 'divider',
+                overflow: 'hidden',
+              }}
+            >
+              <List sx={{ py: 0 }}>
+                {filteredFiles.map((file, index) => (
+                  <React.Fragment key={file.id || file.s3_key}>
+                    <ListItem
+                      onClick={() => handleCardClick(file)}
+                      sx={{
+                        cursor: 'pointer',
+                        py: 2,
+                        px: { xs: 2, sm: 3 },
+                        backgroundColor: updatingFileId === file.id || updatingFileId === file.s3_key ? 'action.hover' : 'transparent',
+                        opacity: updatingFileId === file.id || updatingFileId === file.s3_key ? 0.7 : 1,
+                        '&:hover': {
+                          backgroundColor: 'action.hover',
+                        },
+                      }}
+                    >
+                      <ListItemAvatar>
+                        <Box
+                          sx={{
+                            width: 48,
+                            height: 48,
+                            borderRadius: 2,
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            backgroundColor: isImage(file.file_name) || isVideo(file.file_name) ? 'transparent' : '#f3f4f6',
+                            overflow: 'hidden',
+                          }}
+                        >
+                          {(isImage(file.file_name) || isVideo(file.file_name)) ? (
+                            <img
+                              src={file.simple_url}
+                              alt={file.file_name}
+                              style={{
+                                width: '100%',
+                                height: '100%',
+                                objectFit: 'cover',
+                              }}
+                              onError={(e) => {
+                                e.target.style.display = 'none';
+                                // Fallback handled by parent container
+                              }}
+                            />
+                          ) : (
+                            getFileIcon(file.file_name)
+                          )}
+                        </Box>
+                      </ListItemAvatar>
+                      <ListItemText
+                        primary={
+                          <Typography
+                            variant="body1"
+                            sx={{
+                              fontWeight: 600,
+                              fontSize: { xs: '0.95rem', sm: '1rem' },
+                              mb: 0.25,
+                            }}
+                            noWrap
+                          >
+                            {file.file_name}
+                          </Typography>
+                        }
+                        secondary={
+                          <Box sx={{ display: 'flex', gap: 1, alignItems: 'center', mt: 0.5 }}>
+                            <Typography variant="caption" color="text.secondary">
+                              {formatFileSize(file.metadata?.size)}
+                            </Typography>
+                            <Typography variant="caption" color="text.secondary" sx={{ mx: 0.5 }}>
+                              •
+                            </Typography>
+                            <Typography variant="caption" color="text.secondary">
+                              {formatDate(file.last_modified)}
+                            </Typography>
+                            <Box sx={{ ml: 1 }}>
+                              <Chip
+                                icon={getTierIcon(file.metadata?.tier)}
+                                label={getTierLabel(file.metadata?.tier)}
+                                size="small"
+                                sx={{
+                                  height: 20,
+                                  fontSize: '0.7rem',
+                                  '& .MuiChip-icon': {
+                                    fontSize: '0.875rem',
+                                  },
+                                }}
+                              />
+                            </Box>
+                          </Box>
+                        }
+                      />
+                      <ListItemSecondaryAction>
+                        <IconButton
+                          edge="end"
+                          onClick={(e) => handleClick(e, file)}
+                          size="small"
+                        >
+                          <MoreVertIcon />
+                        </IconButton>
+                      </ListItemSecondaryAction>
+                      {(updatingFileId === file.id || updatingFileId === file.s3_key) && (
+                        <Box
+                          sx={{
+                            position: 'absolute',
+                            left: 0,
+                            right: 0,
+                            top: 0,
+                            bottom: 0,
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            backgroundColor: 'rgba(255, 255, 255, 0.8)',
+                            zIndex: 1,
+                          }}
+                        >
+                          <CircularProgress size={24} />
+                        </Box>
+                      )}
+                    </ListItem>
+                    {index < filteredFiles.length - 1 && <Divider />}
+                  </React.Fragment>
+                ))}
+              </List>
+            </Paper>
           ) : (
+            // Grid View (existing card design, slightly updated)
             <Grid container spacing={2}>
               {filteredFiles.map((file) => (
                 <Grid item xs={12} sm={6} md={4} lg={3} key={file.id}>
-                  <Card 
-                    variant="outlined" 
-                    sx={{ 
+                  <Card
+                    variant="outlined"
+                    sx={{
                       height: '100%',
                       position: 'relative',
                       opacity: updatingFileId === file.id || updatingFileId === file.s3_key ? 0.7 : 1,
@@ -775,11 +1015,8 @@ const FileList = ({
                       borderRadius: 3,
                       overflow: 'hidden',
                       '&:hover': {
-                        transform: { xs: 'none', sm: 'translateY(-8px)' },
-                        boxShadow: { 
-                          xs: '0 2px 8px rgba(0,0,0,0.1)',
-                          sm: '0 8px 24px rgba(0,0,0,0.15)' 
-                        },
+                        transform: { xs: 'none', sm: 'translateY(-4px)' },
+                        boxShadow: { xs: '0 2px 8px rgba(0,0,0,0.1)', sm: '0 8px 24px rgba(0,0,0,0.15)' },
                       },
                       cursor: 'pointer',
                       border: '1px solid',
@@ -788,33 +1025,33 @@ const FileList = ({
                     onClick={() => handleCardClick(file)}
                   >
                     {(updatingFileId === file.id || updatingFileId === file.s3_key) && (
-                      <Box 
-                        sx={{ 
-                          position: 'absolute', 
-                          top: 0, 
-                          left: 0, 
-                          right: 0, 
-                          bottom: 0, 
-                          display: 'flex', 
-                          alignItems: 'center', 
+                      <Box
+                        sx={{
+                          position: 'absolute',
+                          top: 0,
+                          left: 0,
+                          right: 0,
+                          bottom: 0,
+                          display: 'flex',
+                          alignItems: 'center',
                           justifyContent: 'center',
                           zIndex: 1,
-                          backgroundColor: 'rgba(255, 255, 255, 0.7)'
+                          backgroundColor: 'rgba(255, 255, 255, 0.7)',
                         }}
                       >
                         <CircularProgress size={30} />
                       </Box>
                     )}
-                    
+
                     {getFileThumbnail(file)}
-                    
+
                     <CardContent sx={{ flexGrow: 1, position: 'relative', p: { xs: 1.5, sm: 2 } }}>
                       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 1 }}>
                         <Tooltip title={file.file_name} arrow>
-                          <Typography 
-                            variant="h6" 
-                            noWrap 
-                            sx={{ 
+                          <Typography
+                            variant="h6"
+                            noWrap
+                            sx={{
                               maxWidth: { xs: '70%', sm: '80%' },
                               fontSize: { xs: '0.95rem', sm: '1rem' },
                               fontWeight: 600,
@@ -823,11 +1060,11 @@ const FileList = ({
                             {file.file_name}
                           </Typography>
                         </Tooltip>
-                        <IconButton 
-                          aria-label="more" 
+                        <IconButton
+                          aria-label="more"
                           onClick={(e) => handleClick(e, file)}
                           size="small"
-                          sx={{ 
+                          sx={{
                             zIndex: 2,
                             '&:hover': {
                               backgroundColor: 'action.hover',
@@ -837,32 +1074,32 @@ const FileList = ({
                           <MoreVertIcon />
                         </IconButton>
                       </Box>
-                      
+
                       <Divider sx={{ my: 1.5 }} />
-                      
+
                       <Box sx={{ mt: 1 }}>
-                        <Typography 
-                          variant="body2" 
+                        <Typography
+                          variant="body2"
                           color="text.secondary"
                           sx={{ fontSize: { xs: '0.75rem', sm: '0.875rem' }, mb: 0.5 }}
                         >
                           Size: {formatFileSize(file.metadata?.size)}
                         </Typography>
-                        <Typography 
-                          variant="body2" 
+                        <Typography
+                          variant="body2"
                           color="text.secondary"
                           sx={{ fontSize: { xs: '0.75rem', sm: '0.875rem' }, mb: 1 }}
                         >
                           Modified: {formatDate(file.last_modified)}
                         </Typography>
                         <Box sx={{ display: 'flex', alignItems: 'center', mt: 1, justifyContent: 'space-between', flexWrap: 'wrap', gap: 1 }}>
-                          <Chip 
-                            icon={getTierIcon(file.metadata?.tier)} 
+                          <Chip
+                            icon={getTierIcon(file.metadata?.tier)}
                             label={getTierLabel(file.metadata?.tier)}
                             size="small"
                             color={file.metadata?.tier === 'glacier' ? 'info' : 'default'}
                             variant={file.metadata?.tier === 'unarchiving' ? 'outlined' : 'filled'}
-                            sx={{ 
+                            sx={{
                               fontSize: { xs: '0.7rem', sm: '0.75rem' },
                               height: { xs: 20, sm: 24 },
                             }}

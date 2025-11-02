@@ -42,11 +42,11 @@ export const AuthProvider = ({ children }) => {
         email,
         password
       });
-      if (response.data.token) {
-        localStorage.setItem('authToken', response.data.token); // Use 'authToken'
-        setUser({ email, token: response.data.token });
-        return response.data; // Optional: return data in case it needs to be used
-      }
+      // Don't automatically log in - user needs to verify email first
+      // The backend will send a verification email, and we'll only log them in after verification
+      // If the backend returns a token immediately (for testing), we can optionally handle that,
+      // but typically registration should require email verification first
+      return response.data;
     } catch (error) {
       console.error('Registration failed:', error);
       throw error;

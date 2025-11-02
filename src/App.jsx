@@ -5,6 +5,7 @@ import { AuthProvider, useAuth } from './contexts/AuthContext';
 import FileUpload from './components/FileUpload';
 import CmdLineUpload from './components/CmdLineUpload';
 import Auth from './components/Auth';
+import EmailVerification from './components/EmailVerification';
 import axios from 'axios';
 
 // This component now handles the conditional rendering based on showCmdUpload
@@ -39,6 +40,7 @@ function AppContent() {
   return (
     <Routes>
       <Route path="/login" element={<Auth />} />
+      <Route path="/verify-email" element={<EmailVerification />} />
       <Route 
         path="/" 
         element={

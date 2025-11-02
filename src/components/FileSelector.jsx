@@ -33,6 +33,7 @@ const FileSelector = ({
   setError,
   fetchUploadedFiles,
   setShowCmdUpload,
+  onUploadComplete,
 }) => {
   const handleFileChange = (event) => {
     const files = Array.from(event.target.files);
@@ -216,6 +217,9 @@ const FileSelector = ({
         }
 
         fetchUploadedFiles();
+        if (onUploadComplete) {
+          onUploadComplete();
+        }
       }
     } catch (err) {
       console.error('Error in file upload process:', err);

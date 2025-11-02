@@ -15,6 +15,7 @@ import {
 import Visibility from '@mui/icons-material/Visibility';
 import VisibilityOff from '@mui/icons-material/VisibilityOff';
 import CloudUploadIcon from '@mui/icons-material/CloudUpload';
+import EmailIcon from '@mui/icons-material/Email';
 
 function Register() {
   const [email, setEmail] = useState('');
@@ -24,11 +25,42 @@ function Register() {
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [success, setSuccess] = useState(false);
+  const [emailError, setEmailError] = useState('');
   const { register } = useAuth();
+
+  // Basic email validation
+  const validateEmail = (email) => {
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    return emailRegex.test(email);
+  };
+
+  const handleEmailChange = (e) => {
+    const value = e.target.value;
+    setEmail(value);
+    
+    if (value && !validateEmail(value)) {
+      setEmailError('Please enter a valid email address');
+    } else {
+      setEmailError('');
+    }
+  };
 
   const handleRegister = async (event) => {
     event?.preventDefault();
     setError('');
+    setEmailError('');
+    
+    // Validate email format
+    if (!email) {
+      setEmailError('Email is required');
+      return;
+    }
+    
+    if (!validateEmail(email)) {
+      setEmailError('Please enter a valid email address');
+      return;
+    }
     
     if (password !== confirmPassword) {
       setError('Passwords do not match');
@@ -43,7 +75,7 @@ function Register() {
     try {
       setLoading(true);
       await register(email, password);
-      alert('Registration successful. Please sign in.');
+      setSuccess(true);
       setLoading(false);
     } catch (err) {
       setError(err.response?.data?.error || err.message || 'Registration failed. Please try again.');
@@ -117,38 +149,76 @@ function Register() {
             </Typography>
           </Box>
 
-          <Box component="form" noValidate onSubmit={handleRegister} sx={{ width: '100%', mt: 1 }}>
-            {error && (
-              <Alert 
-                severity="error" 
-                sx={{ 
-                  mb: 2,
-                  borderRadius: 2,
+          {success ? (
+            <Box sx={{ width: '100%', mt: 1, textAlign: 'center' }}>
+              <Box
+                sx={{
+                  mb: 3,
+                  display: 'flex',
+                  justifyContent: 'center',
                 }}
               >
-                {error}
-              </Alert>
-            )}
-            
-            <TextField
-              variant="outlined"
-              margin="normal"
-              required
-              fullWidth
-              id="email"
-              label="Email Address"
-              name="email"
-              autoComplete="email"
-              autoFocus
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              sx={{
-                '& .MuiOutlinedInput-root': {
+                <EmailIcon sx={{ fontSize: 64, color: 'primary.main' }} />
+              </Box>
+              <Typography variant="h5" sx={{ fontWeight: 600, mb: 2 }}>
+                Check Your Email!
+              </Typography>
+              <Alert 
+                severity="success" 
+                sx={{ 
+                  mb: 3,
                   borderRadius: 2,
-                },
-                mb: 2,
-              }}
-            />
+                  textAlign: 'left',
+                }}
+              >
+                <Typography variant="body1" sx={{ mb: 1 }}>
+                  We've sent a verification email to <strong>{email}</strong>
+                </Typography>
+                <Typography variant="body2">
+                  Please click the link in the email to verify your account before signing in. 
+                  The verification link will expire in 24 hours.
+                </Typography>
+              </Alert>
+              <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+                Didn't receive the email? Check your spam folder or try registering again.
+              </Typography>
+            </Box>
+          ) : (
+            <Box component="form" noValidate onSubmit={handleRegister} sx={{ width: '100%', mt: 1 }}>
+              {error && (
+                <Alert 
+                  severity="error" 
+                  sx={{ 
+                    mb: 2,
+                    borderRadius: 2,
+                  }}
+                >
+                  {error}
+                </Alert>
+              )}
+              
+              <TextField
+                variant="outlined"
+                margin="normal"
+                required
+                fullWidth
+                id="email"
+                label="Email Address"
+                name="email"
+                type="email"
+                autoComplete="email"
+                autoFocus
+                value={email}
+                onChange={handleEmailChange}
+                error={!!emailError}
+                helperText={emailError}
+                sx={{
+                  '& .MuiOutlinedInput-root': {
+                    borderRadius: 2,
+                  },
+                  mb: 2,
+                }}
+              />
             
             <TextField
               variant="outlined"
@@ -246,6 +316,7 @@ function Register() {
               )}
             </Button>
           </Box>
+          )}
         </Paper>
       </Container>
     </Box>
