@@ -33,6 +33,8 @@ import {
   ListItemAvatar,
   ListItemText,
   ListItemSecondaryAction,
+  Select,
+  FormControl,
 } from '@mui/material';
 import MoreVertIcon from '@mui/icons-material/MoreVert';
 import DownloadIcon from '@mui/icons-material/Download';
@@ -79,7 +81,10 @@ const FileList = ({
   const [totalFiles, setTotalFiles] = useState(0);
   const [refreshing, setRefreshing] = useState(false);
   const [updatingFileId, setUpdatingFileId] = useState(null);
-  const [itemsPerPage] = useState(10);
+  const [itemsPerPage, setItemsPerPage] = useState(() => {
+    const saved = localStorage.getItem('sdrive_items_per_page');
+    return saved ? parseInt(saved, 10) : 10;
+  });
   
   // View mode: 'list' or 'grid'
   const [viewMode, setViewMode] = useState('list');
@@ -273,6 +278,15 @@ const FileList = ({
   const handlePageChange = (event, newPage) => {
     setPage(newPage);
     fetchFiles(newPage);
+  };
+
+  // Handle items per page change
+  const handleItemsPerPageChange = (event) => {
+    const newValue = parseInt(event.target.value, 10);
+    setItemsPerPage(newValue);
+    localStorage.setItem('sdrive_items_per_page', newValue.toString());
+    setPage(1); // Reset to first page when changing items per page
+    fetchFiles(1, false, false);
   };
 
   // Refresh files with fresh data from S3
@@ -595,8 +609,8 @@ const FileList = ({
     }
   };
 
-  // Calculate storage percentage (assuming 2GB limit, can be made configurable)
-  const storageLimit = 2 * 1024 * 1024 * 1024; // 2GB in bytes
+  // Calculate storage percentage (use API limit if available, fallback to 10GB)
+  const storageLimit = accountUsage?.storage_limit || (10 * 1024 * 1024 * 1024); // Default 10GB in bytes
   const storagePercentage = totalSpaceUsed ? Math.min((totalSpaceUsed / storageLimit) * 100, 100) : 0;
   
   // Use account usage from API if available, otherwise fallback to props
@@ -1230,12 +1244,54 @@ const FileList = ({
         </Box>
       )}
 
-      {totalPages > 1 && (
-        <Box sx={{ display: 'flex', justifyContent: 'center', mt: { xs: 2, sm: 3 }, mb: 2 }}>
-          <Pagination 
-            count={totalPages} 
-            page={page} 
-            onChange={handlePageChange} 
+      {/* Pagination Controls */}
+      <Box
+        sx={{
+          display: 'flex',
+          justifyContent: 'center',
+          alignItems: 'center',
+          flexWrap: 'wrap',
+          gap: 2,
+          mt: { xs: 2, sm: 3 },
+          mb: 2
+        }}
+      >
+        {/* Items per page selector */}
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+          <Typography variant="body2" sx={{ color: 'text.secondary', fontSize: '0.875rem' }}>
+            Show:
+          </Typography>
+          <FormControl size="small">
+            <Select
+              value={itemsPerPage}
+              onChange={handleItemsPerPageChange}
+              disabled={loading || refreshing}
+              sx={{
+                minWidth: 70,
+                height: 32,
+                fontSize: '0.875rem',
+                '& .MuiSelect-select': {
+                  py: 0.5,
+                },
+              }}
+            >
+              <MUIMenuItem value={10}>10</MUIMenuItem>
+              <MUIMenuItem value={25}>25</MUIMenuItem>
+              <MUIMenuItem value={50}>50</MUIMenuItem>
+              <MUIMenuItem value={100}>100</MUIMenuItem>
+            </Select>
+          </FormControl>
+          <Typography variant="body2" sx={{ color: 'text.secondary', fontSize: '0.875rem' }}>
+            per page
+          </Typography>
+        </Box>
+
+        {/* Page navigation */}
+        {totalPages > 1 && (
+          <Pagination
+            count={totalPages}
+            page={page}
+            onChange={handlePageChange}
             color="primary"
             disabled={loading || refreshing}
             size="small"
@@ -1250,8 +1306,8 @@ const FileList = ({
               },
             }}
           />
-        </Box>
-      )}
+        )}
+      </Box>
 
       <MUIMenu
         id="file-menu"
