@@ -33,10 +33,10 @@ const isVideo = (fileName) => {
   );
 };
 
-const MediaScrollView = ({ 
-  files, 
-  open, 
-  onClose, 
+const MediaScrollView = ({
+  files,
+  open,
+  onClose,
   initialIndex = 0,
   handleFileAction,
   fetchMoreFiles, // Function to fetch next page
@@ -50,14 +50,42 @@ const MediaScrollView = ({
   const containerRef = useRef(null);
   const videoRefs = useRef({});
   const isLoadingMoreRef = useRef(false);
+  const hasInitializedRef = useRef(false);
+  const previousFilesLengthRef = useRef(0);
 
   // Filter and update media files when files change
+  // Use a smarter merge strategy to avoid resetting scroll position
   useEffect(() => {
-    const mediaFiles = files.filter(file => 
+    const mediaFiles = files.filter(file =>
       isImage(file.file_name) || isVideo(file.file_name)
     );
-    setAllMediaFiles(mediaFiles);
-  }, [files]);
+
+    // If this is a new set of files (dialog just opened or page changed)
+    // We need to determine if files were appended (pagination) or replaced (new open)
+    if (!open) {
+      // Dialog is closed, reset for next open
+      hasInitializedRef.current = false;
+      previousFilesLengthRef.current = 0;
+      return;
+    }
+
+    if (!hasInitializedRef.current) {
+      // First time opening - set all files
+      setAllMediaFiles(mediaFiles);
+      previousFilesLengthRef.current = mediaFiles.length;
+      hasInitializedRef.current = true;
+    } else if (files.length > previousFilesLengthRef.current) {
+      // More files were added (pagination) - append only new media files
+      // Get existing file keys to avoid duplicates
+      const existingKeys = new Set(allMediaFiles.map(f => f.s3_key || f.id));
+      const newMediaFiles = mediaFiles.filter(f => !existingKeys.has(f.s3_key || f.id));
+
+      if (newMediaFiles.length > 0) {
+        setAllMediaFiles(prev => [...prev, ...newMediaFiles]);
+      }
+      previousFilesLengthRef.current = files.length;
+    }
+  }, [files, open]);
 
   // Get storage tier icon
   const getTierIcon = (tier) => {
@@ -149,8 +177,11 @@ const MediaScrollView = ({
     };
   }, [open, onClose]);
 
+  // Only scroll to initial index when dialog first opens, not on subsequent file loads
+  const hasScrolledToInitialRef = useRef(false);
+
   useEffect(() => {
-    if (open && allMediaFiles.length > 0) {
+    if (open && allMediaFiles.length > 0 && !hasScrolledToInitialRef.current) {
       const index = Math.min(initialIndex, allMediaFiles.length - 1);
       setCurrentIndex(index);
       // Scroll to the current item after a brief delay to ensure DOM is ready
@@ -162,6 +193,12 @@ const MediaScrollView = ({
           }
         }
       }, 100);
+      hasScrolledToInitialRef.current = true;
+    }
+
+    // Reset when dialog closes
+    if (!open) {
+      hasScrolledToInitialRef.current = false;
     }
   }, [open, initialIndex, allMediaFiles.length]);
 

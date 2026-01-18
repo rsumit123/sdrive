@@ -52,6 +52,9 @@ const FileUpload = ({ setShowCmdUpload }) => {
   const [accountUsage, setAccountUsage] = useState(null);
   const [usageLoading, setUsageLoading] = useState(false);
 
+  // Refresh trigger for FileList - increment to trigger a refresh
+  const [fileListRefreshTrigger, setFileListRefreshTrigger] = useState(0);
+
   const { logout, user } = useAuth();
   const [settingsMenuOpen, setSettingsMenuOpen] = useState(false);
   const [settingsAnchorEl, setSettingsAnchorEl] = useState(null);
@@ -259,7 +262,9 @@ const FileUpload = ({ setShowCmdUpload }) => {
           }
         }
 
-        fetchUploadedFiles();
+        // Trigger FileList to refresh
+        setFileListRefreshTrigger(prev => prev + 1);
+        fetchAccountUsage();
       }
     } catch (err) {
       console.error('Error in file upload process:', err);
@@ -346,7 +351,7 @@ const FileUpload = ({ setShowCmdUpload }) => {
   
         if (response.status === 200) {
           alert('File deleted successfully.');
-          fetchUploadedFiles();
+          setFileListRefreshTrigger(prev => prev + 1);
           fetchAccountUsage(); // Refresh usage after delete
         } else {
           alert(`Unexpected response status: ${response.status}`);
@@ -410,7 +415,7 @@ const FileUpload = ({ setShowCmdUpload }) => {
       );
 
       if (response.status === 200) {
-        fetchUploadedFiles();
+        setFileListRefreshTrigger(prev => prev + 1);
         fetchAccountUsage(); // Refresh usage after rename
         setRenameDialogOpen(false);
       } else {
@@ -729,6 +734,7 @@ const FileUpload = ({ setShowCmdUpload }) => {
           totalSpaceUsed={totalSpaceUsed}
           accountUsage={accountUsage}
           onFilesChanged={fetchAccountUsage}
+          refreshTrigger={fileListRefreshTrigger}
         />
 
         {uploadErrors.length > 0 && (

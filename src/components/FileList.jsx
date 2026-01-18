@@ -71,6 +71,7 @@ const FileList = ({
   totalSpaceUsed,
   accountUsage,
   onFilesChanged,
+  refreshTrigger, // Increment this to trigger a refresh from parent
 }) => {
   // State for pagination and data
   const [files, setFiles] = useState(initialFiles || []);
@@ -273,6 +274,18 @@ const FileList = ({
   useEffect(() => {
     fetchFiles(page);
   }, []);
+
+  // Watch for refresh trigger from parent (e.g., after file upload)
+  const initialRefreshTriggerRef = React.useRef(refreshTrigger);
+  useEffect(() => {
+    // Skip on initial mount - only refresh when trigger changes
+    if (refreshTrigger !== undefined && refreshTrigger !== initialRefreshTriggerRef.current) {
+      initialRefreshTriggerRef.current = refreshTrigger;
+      // Reset to page 1 and fetch fresh data
+      setPage(1);
+      fetchFiles(1, false, true);
+    }
+  }, [refreshTrigger]);
 
   // Handle page change
   const handlePageChange = (event, newPage) => {
